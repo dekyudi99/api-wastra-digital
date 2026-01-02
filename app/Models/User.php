@@ -26,6 +26,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'profile_picture',
     ];
 
     /**
@@ -37,6 +38,17 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected $appends = ['profile'];
+
+    public function getProfileAttribute()
+    {
+        if ($this->profile_picture) 
+        {
+            return (env('APP_URL').'/storage/'.$this->profile_picture);
+        }
+        return null;
+    }
 
     /**
      * The attributes that should be cast.

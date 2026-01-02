@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\MidtransCallbackController;
+use App\Http\Controllers\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,12 +18,10 @@ use App\Http\Controllers\OrderController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
 
 Route::get('/product', [ProductController::class, 'index']);
 
@@ -31,9 +30,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,pengerajin');
 
+    Route::get('/order/{id}', [OrderController::class, 'show'])->middleware('role:pengguna,admin');
+
     Route::middleware('role:pengguna')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
         Route::post('/cart/get', [OrderController::class, 'myCart']);
+
+        Route::post('/order/cart', [OrderController::class, 'orderCart']);
+        Route::post('/order/direct/{id}', [OrderController::class, 'directOrder']);
+        Route::get('/order/my-order', [OrderController::class, 'myOrder']);
+
+        Route::post('/payment/{id}', [PaymentController::class, 'pay']);
     });
 
     Route::middleware('role:pengerajin')->group(function () {
@@ -42,6 +49,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::middleware('role:admin')->group(function () {
-
+        Route::get('/order', [OrderController::class, 'order']);
     });
 });
