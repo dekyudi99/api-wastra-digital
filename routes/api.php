@@ -38,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:pengguna')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
-        Route::post('/cart/get', [OrderController::class, 'myCart']);
+        Route::get('/cart/get', [OrderController::class, 'myCart']);
 
         Route::post('/order/cart', [OrderController::class, 'orderCart']);
         Route::post('/order/direct/{id}', [OrderController::class, 'directOrder']);
