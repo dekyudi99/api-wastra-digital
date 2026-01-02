@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MidtransCallbackController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,6 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,pengerajin');
 
     Route::get('/order/{id}', [OrderController::class, 'show'])->middleware('role:pengguna,admin');
+
+    Route::get('/user/profile', [UserController::class, 'profile']);
+    Route::post('/user/profile/update', [UserController::class, 'update']);
 
     Route::middleware('role:pengguna')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);

@@ -11,28 +11,6 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
-    public function getMasyarakat()
-    {
-        $user = User::where('role', 'masyarakat')->with("membership")->get();
-
-        if (!$user) {
-            return new ApiResponseDefault(false, 'Gagal Mendapatkan Data Masyarakat', null, 500);
-        }
-        
-        return new ApiResponseDefault(true, 'Berhasil Manampilkan Data!', $user);
-    }
-
-    public function show($id)
-    {
-        $user = User::with("membership")->find($id);
-
-        if (!$user) {
-            return new ApiResponseDefault(false, "User Tidak Ditemukan!", null, 404);
-        }
-
-        return new ApiResponseDefault(true, "Berhasil Mengambil Data User!", $user);
-    }
-
     public function profile()
     {
         $user = User::with("membership")->find(Auth::id());
