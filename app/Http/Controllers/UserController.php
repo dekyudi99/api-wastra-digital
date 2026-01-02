@@ -30,8 +30,6 @@ class UserController extends Controller
         $messages = [
             "name.required" => "Nama Wajib Diisi!",
             "name.max" => "Nama Maksimal :values Karakter!",
-            "phone_number.digits_between" => "Nomor Handphone Harus Memiliki Rentang 10 Hingga 13 Digit!",
-            "address.max" => "Alamat Maksimal :values Karakter!",
             'profile_picture.image' => 'File pada salah satu gambar harus berupa gambar (jpeg, png, jpg, gif, svg).',
             'profile_picture.mimes' => 'Format file gambar tidak valid. Hanya format :values yang diizinkan.',
             'profile_picture.max' => 'Ukuran file salah satu gambar tidak boleh melebihi :max kilobyte.',
@@ -39,8 +37,6 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             "name" => "required|max:255",
-            "phone_number" => "nullable|digits_between:10,13",
-            "address" => "nullable|max:255",
             "profile_picture" => "nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048"
         ], $messages);
 
