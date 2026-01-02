@@ -31,7 +31,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,pengerajin');
 
-    Route::get('/order/{id}', [OrderController::class, 'show'])->middleware('role:pengguna,admin');
+    Route::get('/order/show/{id}', [OrderController::class, 'show'])->middleware('role:pengguna,admin');
 
     Route::get('/user/profile', [UserController::class, 'profile']);
     Route::post('/user/profile/update', [UserController::class, 'update']);
