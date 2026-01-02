@@ -78,7 +78,7 @@ class OrderController extends Controller
 
         $validator = Validator::make($request->all(), [
             'cart_ids'       => 'required|array',
-            'cart_ids.*'     => 'exists:cart,id',
+            'cart_ids.*'     => 'exists:carts,id',
             'shipping_address' => 'required|string',
         ], $messages);
 
