@@ -10,6 +10,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\Product;
 use App\Models\Cart;
 use App\Models\Favorit;
+use App\Models\Order;
 
 class User extends Authenticatable
 {
@@ -47,15 +48,19 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    protected function product() {
+    public function product() {
         return $this->hasMany(Product::class, 'user_id', 'id');
     }
 
-    protected function cart() {
+    public function cart() {
         return $this->hasMany(Cart::class, 'product_id', 'id');
     }
 
-    protected function favorit() {
+    public function favorit() {
         return $this->hasMany(Favorit::class, 'product_id', 'id');
+    }
+
+    public function order() {
+        return $this->hasMany(Order::class, 'user_id', 'id');
     }
 }
