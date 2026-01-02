@@ -13,7 +13,7 @@ class UserController extends Controller
 {
     public function profile()
     {
-        $user = User::with("membership")->find(Auth::id());
+        $user = User::find(Auth::id());
 
         return new ApiResponseDefault(true, 'Berhasil Menampilkan Profile', $user);
     }
