@@ -42,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/order/cart', [OrderController::class, 'orderCart']);
         Route::post('/order/direct/{id}', [OrderController::class, 'directOrder']);
-        Route::get('/order/my-order', [OrderController::class, 'myOrder']);
+        Route::get('/order/myorder', [OrderController::class, 'myOrder']);
 
         Route::post('/payment/{id}', [PaymentController::class, 'pay']);
     });
