@@ -254,4 +254,18 @@ class OrderController extends Controller
 
         return new ApiResponseDefault(true, 'Detail Pesanan Berhasil Ditempilkan!', $order);
     }
+
+    public function orderIn()
+    {
+        $orderItems = OrderItem::with(['product', 'order'])
+            ->whereHas('product', function ($query) {
+                $query->where('user_id', Auth::id());
+            })->get();
+        
+        if ($orderItems->isEmpty()) {
+            return new ApiResponseDefault(false, 'Belum ada pesanan!', null, 404);
+        }
+
+        return new ApiResponseDefault(true, 'Berhasil menampilkan pesanan!', $orderItems);
+    }
 }

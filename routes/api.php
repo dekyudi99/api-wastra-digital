@@ -50,6 +50,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:pengerajin')->group(function () {
         Route::post('/product/store', [ProductController::class, 'store']);
         Route::post('/product/update/{id}', [ProductController::class, 'update']);
+
+        Route::get('/order/in', [OrderController::class, 'orderIn']);
     });
 
     Route::middleware('role:admin')->group(function () {
