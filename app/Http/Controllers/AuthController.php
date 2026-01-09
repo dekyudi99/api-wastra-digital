@@ -8,9 +8,18 @@ use App\Http\Resources\ApiResponseDefault;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use App\Services\OtpService;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    protected $otpService;
+
+    public function __construct(OtpService $otpService)
+    {
+        $this->otpService = $otpService;
+    }
+
     public function register(Request $request)
     {
         $messages = [
@@ -49,6 +58,7 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $this->otpService->generate($request->email);
 
         return new ApiResponseDefault(
             true,
@@ -82,6 +92,10 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
         if (!$user || !Hash::check($request->password, $user->password)) {
             return new ApiResponseDefault(false, 'Email atau Password salah', null, 422);
+        }
+
+        if (!$user->email_verified) {
+            $this->otpService->generate($request->email);
         }
         
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -130,5 +144,68 @@ class AuthController extends Controller
         DB::table('password_reset_tokens')->where('email', $reset->email)->delete();
 
         return new ApiResponseDefault(true, 'Password berhasil diperbarui.');
+    }
+
+    public function verifyEmail(Request $request) {
+        $messages = [
+            'otp.required' => 'Kode OTP wajib diisi!',
+            'otp.digits' => 'Kode OTP wajib 6 digit!',
+            'otp.integer' => 'Kode OTP wajib Berupa Integer',
+        ];
+        
+        $validator = Validator::make($request->all(), [
+            'otp' => 'required|integer|digits:6',
+        ], $messages);
+
+        if ($validator->fails()) {
+            return new ApiResponseDefault(false, $validator->errors(), null, 422);
+        }
+
+        $succeed = $this->otpService->verify($request->otp);
+
+        if (!$succeed) {
+            return new ApiResponseDefault(false, 'Kode OTP salah atau Sudah Kadaluwarsa!', null, 422);
+        }
+
+        $user = User::where('id', Auth::user()->id)->first();
+        $user->email_verified = 1;
+        $user->save();
+
+        return new ApiResponseDefault(true, 'Verifikasi Email Berhasil', Null);
+    }
+
+    // public function forgetPassword(Request $request)
+    // {
+    //     $messages = [
+    //         'email.required' => 'Email Wajib Diisi!',
+    //         'email.email' => 'Format Email Salah!',
+    //         'email.exists' => 'Email Tidak Terdaftar!',
+    //     ];
+
+    //     $validator = Validator::make($request->all(), [
+    //         'email'=> 'required|email|exists:users,email',
+    //     ], $messages);
+
+    //     if ($validator->fails()) {
+    //         return new ApiResponseDefault(false, $validator->errors(), null, 422);
+    //     }
+
+    //     $user = User::where('email', $request->email)->first();
+
+    //     $token = Str::random(60);
+
+    //     DB::table('password_reset_tokens')->updateOrInsert(
+    //         ['email' => $user->email],
+    //         ['token' => $token],
+    //     );
+
+    //     Mail::to($user->email)->send(new ChangePasswordMail($user, $token));
+
+    //     return new ApiResponseDefault(true, 'Link Ganti Password Telah Dikirim ke Email');
+    // }
+
+    public function sendToken()
+    {
+        $this->otpService->generate(Auth::user()->email);
     }
 }

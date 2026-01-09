@@ -28,6 +28,8 @@ Route::get('/product', [ProductController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/send-token', [AuthController::class, 'sendToken']);
+    Route::post('/auth/email-verify', [AuthController::class, 'verifyEmail']);
 
     Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,pengerajin');
 
