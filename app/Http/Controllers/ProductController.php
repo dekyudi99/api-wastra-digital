@@ -52,7 +52,7 @@ class ProductController extends Controller
         $product = $query->get();
 
         if ($product->isEmpty()) {
-            return new ApiResponseDefault(false, 'Tidak Ada Product Tersedia!', null, 404);
+            return new ApiResponseDefault(false, 'Tidak Ada Product Tersedia!', null, 200);
         }
 
         return new ApiResponseDefault(true, 'Berhasil Menampilkan Product!', $product);

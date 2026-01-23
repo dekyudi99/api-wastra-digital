@@ -28,17 +28,17 @@ Route::get('/product', [ProductController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/send-token', [AuthController::class, 'sendToken']);
+    Route::post('/auth/send-token', [AuthController::class, 'sendToken']);
     Route::post('/auth/email-verify', [AuthController::class, 'verifyEmail']);
 
-    Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,pengerajin');
+    Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,artisan');
 
-    Route::get('/order/show/{id}', [OrderController::class, 'show'])->middleware('role:pengguna,admin');
+    Route::get('/order/show/{id}', [OrderController::class, 'show'])->middleware('role:customer,admin');
 
     Route::get('/user/profile', [UserController::class, 'profile']);
     Route::post('/user/profile/update', [UserController::class, 'update']);
 
-    Route::middleware('role:pengguna')->group(function () {
+    Route::middleware('role:customer')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
         Route::get('/cart/get', [OrderController::class, 'myCart']);
 
@@ -49,7 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/payment/{id}', [PaymentController::class, 'pay']);
     });
 
-    Route::middleware('role:pengerajin')->group(function () {
+    Route::middleware('role:artisan')->group(function () {
         Route::post('/product/store', [ProductController::class, 'store']);
         Route::post('/product/update/{id}', [ProductController::class, 'update']);
 

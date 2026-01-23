@@ -38,7 +38,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name'      => 'required|min:3|max:100',
             'email'     => 'required|email|unique:users',
-            'role'      => 'required|in:pengguna,pengerajin',
+            'role'      => 'required|in:artisan,customer',
             'password'  => 'required|min:8',
         ], $messages);
 
@@ -64,7 +64,7 @@ class AuthController extends Controller
             true,
             'Registrasi Berhasil!',
             [
-                $user,
+                'user'  => $user,
                 'token' => $token,
             ],
             201
