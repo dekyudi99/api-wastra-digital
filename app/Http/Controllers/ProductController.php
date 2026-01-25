@@ -134,9 +134,9 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::find($id);
+        $product = Product::with('user')->where('id', $id)->get();
 
-        if (!$product) {
+        if ($product->isEmpty()) {
             return new ApiResponseDefault(false, 'Produk Tidak Ditemukan!', null, 404);
         }
 
@@ -252,5 +252,19 @@ class ProductController extends Controller
         $product->delete();
 
         return new ApiResponseDefault(true, 'Produk Berhasil Dihapus!', Null, 200);
+    }
+
+    public function endek()
+    {
+        $endek = Product::where('category', 'Endek')->count();
+
+        return new ApiResponseDefault(true, 'Berhasil menampilkan jumlah kain songket!', ['total'=>$endek]);
+    }
+
+    public function songket()
+    {
+        $songket = Product::where('category', 'Songket')->count();
+
+        return new ApiResponseDefault(true, 'Berhasil menampilkan jumlah!', ['total'=>$songket]);
     }
 }

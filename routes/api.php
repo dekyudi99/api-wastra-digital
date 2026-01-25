@@ -7,6 +7,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MidtransCallbackController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\ShippingAddressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +27,11 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
 
 Route::get('/product', [ProductController::class, 'index']);
+Route::get('/product/songket', [ProductController::class, 'songket']);
+Route::get('/product/endek', [ProductController::class, 'endek']);
+Route::get('/product/{id}', [ProductController::class, 'show']);
+
+Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -41,12 +48,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:customer')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
         Route::get('/cart/get', [OrderController::class, 'myCart']);
+        Route::put('/cart/editCart/{id}', [OrderController::class, 'editCart']);
+        Route::delete('/cart/delete/{id}', [OrderController::class, 'deleteCart']);
+        Route::get('/cart/count', [OrderController::class, 'cartCount']);
 
         Route::post('/order/cart', [OrderController::class, 'orderCart']);
         Route::post('/order/direct/{id}', [OrderController::class, 'directOrder']);
         Route::get('/order/myorder', [OrderController::class, 'myOrder']);
 
         Route::post('/payment/{id}', [PaymentController::class, 'pay']);
+
+        Route::post('/review/store/{id}', [ReviewController::class, 'store']);
+        Route::post('/review/update/{id}', [ReviewController::class, 'update']);
+
+        Route::get('/address', [ShippingAddressController::class, 'index']);
+        Route::post('/address/store', [ShippingAddressController::class, 'store']);
+        Route::put('/address/update/{id}', [ShippingAddressController::class, 'update']);
+        Route::delete('/address/delete/{id}', [ShippingAddressController::class, 'delete']);
+        Route::get('/address/{id}', [ShippingAddressController::class, 'show']);
     });
 
     Route::middleware('role:artisan')->group(function () {

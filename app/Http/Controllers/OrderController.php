@@ -28,7 +28,7 @@ class OrderController extends Controller
         ], $messages);
 
         if ($validator->fails()) {
-            return new ApiResponseDefault(false, $validator->errors(), null, 422);
+            return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
         }
 
         $idUser = Auth::id();
@@ -50,8 +50,66 @@ class OrderController extends Controller
                 return new ApiResponseDefault(false, 'Produk Gagal Ditambahkan Di Keranjang!', null, 500);
             }
 
-            return new ApiResponseDefault(true, 'Produk Berhasil Ditambahkan Di Keranjang!', $$newCartItem, 201);
+            return new ApiResponseDefault(true, 'Produk Berhasil Ditambahkan Di Keranjang!', $newCartItem, 201);
         }
+    }
+
+    public function editCart(Request $request,$id)
+    {
+        $cart = Cart::find($id);
+
+        if (!$cart) {
+            return new ApiResponseDefault(false, "Keranjang tidak ditemukan!", null, 404);
+        } elseif ($cart->user_id != Auth::id()) {
+            return new ApiResponseDefault(false, "Anda tidak bisa mengupdate keranjang pengguna lain!", null, 403);
+        }
+
+        if ($request->has('method')) {
+            if ($request->input("method") == "plus") {
+                $cart->update([
+                    'quantity' => $cart->quantity+1,
+                ]);
+
+                if (!$cart) {
+                    return new ApiResponseDefault(false, "Gagal menambahkan keranjang!", null, 500);
+                }
+
+                return new ApiResponseDefault(true, "Berhasil menambahkan keranjang!");
+            } elseif ($request->input("method") == "minus") {
+                if ($cart->quantity <= 1) {
+                    return new ApiResponseDefault(false, "Keranjang minimal berisi 1 produk!", null, 403);
+                }
+
+                $cart->update([
+                    'quantity' => $cart->quantity-1,
+                ]);
+                
+                if (!$cart) {
+                    return new ApiResponseDefault(false, "Gagal mengurangi keranjang!", null, 500);
+                }
+
+                return new ApiResponseDefault(true, "Berhasil mengurangi keranjang!");
+            } 
+        }
+    }
+
+    public function deleteCart($id)
+    {
+        $cart = Cart::find($id);
+
+        if (!$cart) {
+            return new ApiResponseDefault(false, "Keranjang tidak ditemukan!", null, 404);
+        } elseif ($cart->user_id != Auth::id()) {
+            return new ApiResponseDefault(false, "Anda tidak bisa menghapus keranjang pengguna lain!", null, 403);
+        }
+
+        $cart->delete();
+
+        if (!$cart) {
+            return new ApiResponseDefault(false, "Gagal menghapus keranjang!", null, 500);
+        }
+
+        return new ApiResponseDefault(true, "Berhasil menghapus keranjang!");
     }
 
     // Melihat Keranjang saya
@@ -64,6 +122,13 @@ class OrderController extends Controller
         }
 
         return new ApiResponseDefault(true, 'Daftar Produk di Keranjang Anda Berhasil Ditampilkan!', $cart);
+    }
+
+    public function cartCount()
+    {
+        $cart = Cart::where('user_id', Auth::id())->count();
+
+        return new ApiResponseDefault(true, "Berhasil menampilkan total keranjang!", ['total'=>$cart]);
     }
 
     public function orderCart(Request $request)
@@ -164,7 +229,7 @@ class OrderController extends Controller
         ], $messages);
 
         if ($validator->fails()) {
-            return new ApiResponseDefault(false, $validator->errors(), null, 422);
+            return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
         }
 
         $idUser = Auth::id();

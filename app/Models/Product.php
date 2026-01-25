@@ -9,12 +9,14 @@ use App\Models\ImagesProduct;
 use App\Models\Cart;
 use App\Models\Favorit;
 use App\Models\OrderItem;
+use App\Models\Review;
 
 class Product extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'price',
         'description',
@@ -24,10 +26,9 @@ class Product extends Model
         'wide',
         'long',
         'discount',
-        'user_id',
     ];
 
-    protected $appends = ['last_price', 'image_url',];
+    protected $appends = ['review_count', 'rating', 'last_price', 'image_url'];
 
     protected $hidden = ['images_product'];
 
@@ -43,7 +44,16 @@ class Product extends Model
         })->toArray();
     }
 
-    protected function user() {
+    public function getReviewCountAttribute()
+    {
+        return $this->review_count ?? $this->review()->count();
+    }
+
+    public function getRatingAttribute() {
+        return round($this->review()->avg('rating') ?? 0, 1);
+    }
+
+    public function user() {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
@@ -61,5 +71,9 @@ class Product extends Model
 
     public function order_item() {
         return $this->hasMany(OrderItem::class, 'product_id', 'id');
+    }
+
+    public function review() {
+        return $this->hasMany(Review::class, 'product_id', 'id');
     }
 }

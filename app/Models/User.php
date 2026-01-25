@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\Cart;
 use App\Models\Favorit;
 use App\Models\Order;
+use App\Models\Review;
+use App\Models\ShippingAddress;
 
 class User extends Authenticatable
 {
@@ -75,5 +77,13 @@ class User extends Authenticatable
 
     public function order() {
         return $this->hasMany(Order::class, 'user_id', 'id');
+    }
+
+    public function review() {
+        return $this->hasMany(Review::class, 'user_id', 'id');
+    }
+
+    public function shipping_address() {
+        return $this->hasMany(ShippingAddress::class, 'user_id', 'id');
     }
 }
