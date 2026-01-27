@@ -21,18 +21,6 @@ use App\Http\Controllers\ShippingAddressController;
 |
 */
 
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
-
-Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
-
-Route::get('/product', [ProductController::class, 'index']);
-Route::get('/product/songket', [ProductController::class, 'songket']);
-Route::get('/product/endek', [ProductController::class, 'endek']);
-Route::get('/product/{id}', [ProductController::class, 'show']);
-
-Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/send-token', [AuthController::class, 'sendToken']);
@@ -40,10 +28,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/product/delete/{id}', [ProductController::class, 'delete'])->middleware('role:admin,artisan');
 
-    Route::get('/order/show/{id}', [OrderController::class, 'show'])->middleware('role:customer,admin');
+    Route::get('/order/show/{id}', [OrderController::class, 'show']);
 
     Route::get('/user/profile', [UserController::class, 'profile']);
     Route::post('/user/profile/update', [UserController::class, 'update']);
+    Route::put('/user/change-password', [UserController::class, 'changePassword']);
 
     Route::middleware('role:customer')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
@@ -69,13 +58,28 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::middleware('role:artisan')->group(function () {
+        Route::get('/product/my', [ProductController::class, 'myProduct']);
         Route::post('/product/store', [ProductController::class, 'store']);
         Route::post('/product/update/{id}', [ProductController::class, 'update']);
+        Route::delete('/product/delete/{id}', [ProductController::class, 'delete']);
 
         Route::get('/order/in', [OrderController::class, 'orderIn']);
+        Route::put('/order/update-status/{id}', [OrderController::class, 'updateStatus']);
     });
 
     Route::middleware('role:admin')->group(function () {
         Route::get('/order', [OrderController::class, 'order']);
     });
 });
+
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
+
+Route::get('/product', [ProductController::class, 'index']);
+Route::get('/product/songket', [ProductController::class, 'songket']);
+Route::get('/product/endek', [ProductController::class, 'endek']);
+Route::get('/product/{id}', [ProductController::class, 'show']);
+
+Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);

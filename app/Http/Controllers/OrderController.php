@@ -311,26 +311,81 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::find($id);
+        $artisanId = Auth::id();
 
+        $order = Order::with(['user', 'item' => function ($query) use ($artisanId) {
+                $query->whereHas('product', function ($q) use ($artisanId) {
+                    $q->where('user_id', $artisanId);
+                })->with('product');
+            }])
+            ->find($id);
+
+        // Keamanan: Jika order ada tapi tidak punya item milik artisan ini, tolak.
         if (!$order) {
-            return new ApiResponseDefault(false, 'Pesanan Tidak Ditemukan!', null, 404);
+            return new ApiResponseDefault(false, 'Pesanan tidak ditemukan!', null, 404);
         }
 
-        return new ApiResponseDefault(true, 'Detail Pesanan Berhasil Ditempilkan!', $order);
+        return new ApiResponseDefault(true, 'Detail pesanan berhasil ditampilkan', $order);
     }
 
     public function orderIn()
     {
-        $orderItems = OrderItem::with(['product', 'order'])
-            ->whereHas('product', function ($query) {
-                $query->where('user_id', Auth::id());
-            })->get();
-        
-        if ($orderItems->isEmpty()) {
-            return new ApiResponseDefault(false, 'Belum ada pesanan!', null, 404);
+        $artisanId = Auth::id();
+
+        // Ambil Order yang memiliki item milik pengrajin ini
+        $orders = Order::whereHas('item.product', function ($query) use ($artisanId) {
+                $query->where('user_id', $artisanId);
+            })
+            ->with(['user', 'item' => function ($query) use ($artisanId) {
+                // Eager load HANYA item milik pengrajin ini
+                $query->whereHas('product', function ($q) use ($artisanId) {
+                    $q->where('user_id', $artisanId);
+                })->with('product');
+            }])
+            ->latest()
+            ->get();
+
+        return new ApiResponseDefault(true, 'Daftar pesanan masuk berhasil diambil', $orders);
+    }
+
+    public function updateStatus(Request $request, $orderItemId)
+    {
+        $item = OrderItem::find($orderItemId);
+
+        if (!$item) {
+            return new ApiResponseDefault(false, 'Item pesanan tidak ditemukan!', null, 404);
         }
 
-        return new ApiResponseDefault(true, 'Berhasil menampilkan pesanan!', $orderItems);
+        $user = Auth::user();
+        $requestStatus = $request->status;
+
+        // LOGIKA PENJUAL (Artisan)
+        if ($user->role === 'artisan') {
+            // Validasi otoritas: Apakah produk ini milik dia?
+            if ($item->product->user_id !== $user->id) {
+                return new ApiResponseDefault(false, 'Akses ditolak!', null, 403);
+            }
+
+            $allowedStatus = ['processing', 'shipped', 'cancelled'];
+            if (!in_array($requestStatus, $allowedStatus)) {
+                return new ApiResponseDefault(false, 'Status tidak valid untuk penjual', 422);
+            }
+        } 
+        // LOGIKA PEMBELI (Customer)
+        else if ($user->role === 'customer') {
+            // Validasi otoritas: Apakah ini order milik dia?
+            if ($item->order->user_id !== $user->id) {
+                return new ApiResponseDefault(false, 'Ini bukan pesanan Anda!', null, 403);
+            }
+
+            // Pembeli hanya boleh mengubah ke 'delivered' jika status saat ini 'shipped'
+            if ($requestStatus !== 'delivered' || $item->status !== 'shipped') {
+                return new ApiResponseDefault(false, 'Anda hanya bisa mengonfirmasi pesanan yang sudah dikirim', 422);
+            }
+        }
+
+        $item->update(['status' => $requestStatus]);
+
+        return new ApiResponseDefault(true, 'Status item berhasil diperbarui!', $item);
     }
 }

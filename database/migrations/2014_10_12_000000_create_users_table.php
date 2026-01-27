@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('phone');
             $table->enum('role', ['admin', 'pengerajin', 'pengguna'])->default('pengguna');
             $table->text('profile_picture')->nullable();
             $table->boolean('email_verified')->default(0);

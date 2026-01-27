@@ -17,6 +17,7 @@ class OrderItem extends Model
         'description_at_purchase',
         'price_at_purchase',
         'subtotal',
+        'status',
         'order_id',
         'product_id',
     ];

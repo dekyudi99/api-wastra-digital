@@ -7,6 +7,7 @@ use Midtrans\Snap;
 use App\Models\Order;
 use App\Models\TransactionHistory;
 use App\Http\Resources\ApiResponseDefault;
+use App\Models\Product;
 
 class PaymentController extends Controller
 {
@@ -18,6 +19,15 @@ class PaymentController extends Controller
         Config::$is3ds = true;
 
         $order= Order::findOrFail($id);
+        if ($order->status != "unpaid") {
+            return new ApiResponseDefault(false, "Pesanan sudah selesai atau dibatalkan!", null, 403);
+        }
+
+        if ($order->created_at->diffInMinutes(now()) > 15) {
+            $order->update(['status' => 'cancelled']);
+            return new ApiResponseDefault(false, "Waktu pembayaran habis!", null, 400);
+        }
+        
         $transactionHistory = TransactionHistory::where('invoice_number', $order->invoice_number)->first();
 
         if (!$transactionHistory) {

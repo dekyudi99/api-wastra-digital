@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Http\Resources\ApiResponseDefault;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -20,28 +21,20 @@ class UserController extends Controller
 
     public function update(Request $request)
     {
-        $userId = Auth::id();
-        $user = User::find($userId);
+        $user = User::find(Auth::id());
 
         if (!$user) {
             return new ApiResponseDefault(false, "User tidak ditemukan", null, 404);
         }
 
-        $messages = [
-            "name.required" => "Nama Wajib Diisi!",
-            "name.max" => "Nama Maksimal :values Karakter!",
-            'profile_picture.image' => 'File pada salah satu gambar harus berupa gambar (jpeg, png, jpg, gif, svg).',
-            'profile_picture.mimes' => 'Format file gambar tidak valid. Hanya format :values yang diizinkan.',
-            'profile_picture.max' => 'Ukuran file salah satu gambar tidak boleh melebihi :max kilobyte.',
-        ];
-
         $validator = Validator::make($request->all(), [
             "name" => "required|max:255",
-            "profile_picture" => "nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048"
-        ], $messages);
+            "profile_picture" => "nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048",
+            'phone' => 'required|digits_between:10,13',
+        ]);
 
         if ($validator->fails()) {
-            return new ApiResponseDefault(false, $validator->errors(), null, 422);
+            return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
         }
 
         if ($request->hasFile("profile_picture")) {
@@ -56,8 +49,7 @@ class UserController extends Controller
 
         $user->update([
             "name" => $request->name,
-            "phone_number" => $request->phone_number,
-            "address" => $request->address,
+            "phone" => $request->phone,
             "profile_picture" => $path,
         ]);
 
@@ -66,5 +58,31 @@ class UserController extends Controller
         }
 
         return new ApiResponseDefault(true, "Berhasil Mengupdate Data Pengguna!", $user);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $user = User::find(Auth::id());
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'new_password' => 'required|min:8',
+            'confirm_password' => 'required|same:new_password',
+        ]);
+
+        if ($validator->fails()) {
+            return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
+        }
+
+        // VALIDASI: Cek apakah password lama benar
+        if (!Hash::check($request->current_password, $user->password)) {
+            return new ApiResponseDefault(false, "Password saat ini salah!", null, 400);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return new ApiResponseDefault(true, "Password Berhasil Diperbarui!", null);
     }
 }

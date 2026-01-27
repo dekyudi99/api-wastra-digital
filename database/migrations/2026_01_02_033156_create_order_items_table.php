@@ -18,9 +18,10 @@ return new class extends Migration
             $table->text('description_at_purchase');
             $table->integer('price_at_purchase');
             $table->bigInteger('subtotal');
+            $table->string('status')->default(null);
             $table->timestamps();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate()->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
+            $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate();
         });
     }
 

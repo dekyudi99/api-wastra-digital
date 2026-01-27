@@ -58,6 +58,17 @@ class ProductController extends Controller
         return new ApiResponseDefault(true, 'Berhasil Menampilkan Product!', $product);
     }
 
+    public function myProduct()
+    {
+        $product = Product::where('user_id', Auth::id())->get();
+
+        if ($product->isEmpty()) {
+            return new ApiResponseDefault(false, "Anda belum punya produk!");
+        }
+
+        return new ApiResponseDefault(false, "Berhasil menampilkan produk anda!", $product);
+    }
+
     public function store(Request $request) {
         $messages = [
             'name.required' => 'Nama Produk Wajib Diisi!',
