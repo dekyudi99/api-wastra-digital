@@ -60,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:artisan')->group(function () {
         Route::get('/product/my', [ProductController::class, 'myProduct']);
         Route::post('/product/store', [ProductController::class, 'store']);
-        Route::post('/product/update/{id}', [ProductController::class, 'update']);
+        Route::post('/update/product/{id}', [ProductController::class, 'update']);
         Route::delete('/product/delete/{id}', [ProductController::class, 'delete']);
 
         Route::get('/order/in', [OrderController::class, 'orderIn']);
@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:admin')->group(function () {
         Route::get('/order', [OrderController::class, 'order']);
+        Route::get('/admin/dashboard-stats', [OrderController::class, 'adminDashboardStats']);
     });
 });
 
@@ -83,3 +84,4 @@ Route::get('/product/endek', [ProductController::class, 'endek']);
 Route::get('/product/{id}', [ProductController::class, 'show']);
 
 Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);
+Route::get('/artisan/shop/{id}', [UserController::class, 'artisanShop']);

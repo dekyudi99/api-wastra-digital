@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\PaymentController;
 use App\Http\Resources\ApiResponseDefault;
+use App\Models\User;
 
 class OrderController extends Controller
 {
@@ -32,26 +33,38 @@ class OrderController extends Controller
         }
 
         $idUser = Auth::id();
+        $product = Product::find($id);
+        if (!$product) {
+            return new ApiResponseDefault(false, 'Produk tidak ditemukan!', null, 404);
+        }
+
+        // CEK STOK: Jangan sampai melebihi stok yang tersedia
+        if ($product->stock < $request->quantity) {
+            return new ApiResponseDefault(false, 'Stok tidak mencukupi!', null, 400);
+        }
 
         $cart = Cart::where('user_id', $idUser)->where('product_id', $id)->first();
         
         if ($cart) {
-            $cart->increment('quantity', $request->quantity);
-            
-            return new ApiResponseDefault(true, 'Kuantitas Produk di Keranjang Berhasil Diperbarui!', $cart);
-        } else {
-            $newCartItem = Cart::create([
-                'user_id' => $idUser,
-                'product_id' => $id,
-                'quantity' => $request->quantity,
-            ]);
-
-            if (!$newCartItem) {
-                return new ApiResponseDefault(false, 'Produk Gagal Ditambahkan Di Keranjang!', null, 500);
+            // Cek lagi jika total setelah ditambah melebihi stok
+            if ($product->stock < ($cart->quantity + $request->quantity)) {
+                return new ApiResponseDefault(false, 'Total di keranjang melebihi stok!', null, 400);
             }
-
-            return new ApiResponseDefault(true, 'Produk Berhasil Ditambahkan Di Keranjang!', $newCartItem, 201);
+            $cart->increment('quantity', $request->quantity);
+            return new ApiResponseDefault(true, 'Kuantitas diperbarui!', $cart);
         }
+        
+        $newCartItem = Cart::create([
+            'user_id' => $idUser,
+            'product_id' => $id,
+            'quantity' => $request->quantity,
+        ]);
+
+        if (!$newCartItem) {
+            return new ApiResponseDefault(false, 'Produk Gagal Ditambahkan Di Keranjang!', null, 500);
+        }
+
+        return new ApiResponseDefault(true, 'Produk Berhasil Ditambahkan Di Keranjang!', $newCartItem, 201);
     }
 
     public function editCart(Request $request,$id)
@@ -387,5 +400,49 @@ class OrderController extends Controller
         $item->update(['status' => $requestStatus]);
 
         return new ApiResponseDefault(true, 'Status item berhasil diperbarui!', $item);
+    }
+
+    public function adminDashboardStats()
+    {
+        // 1. Stats Utama
+        $artisanCount = User::where('role', 'artisan')->count();
+        $productCount = Product::count();
+        $ongoingOrders = Order::whereIn('status', ['paid', 'processing', 'shipped'])->count();
+        
+        // Komisi (10% dari total nominal pesanan yang berstatus 'delivered')
+        $totalDeliveredRevenue = Order::where('status', 'delivered')->sum('total_amount');
+        $bumdesCommission = $totalDeliveredRevenue * 0.1;
+
+        // 2. Data Grafik Batang (6 Bulan Terakhir)
+        $monthlyRevenue = Order::selectRaw('MONTHNAME(created_at) as month, SUM(total_amount) as total')
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->whereIn('status', ['paid', 'processing', 'shipped', 'delivered'])
+            ->groupBy('month')
+            ->get();
+
+        // 3. Data Top Pengrajin (Berdasarkan total item yang terjual)
+        $topArtisans = User::where('role', 'artisan')
+            ->withCount(['products as items_sold' => function($query) {
+                $query->join('order_items', 'products.id', '=', 'order_items.product_id')
+                    ->select(DB::raw("sum(quantity)"));
+            }])
+            ->orderBy('items_sold', 'desc')
+            ->take(3)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => [
+                    'artisans' => $artisanCount,
+                    'products' => $productCount,
+                    'ongoing_orders' => $ongoingOrders,
+                    'commission' => (int) $bumdesCommission,
+                    'total_revenue' => (int) $totalDeliveredRevenue
+                ],
+                'revenue_chart' => $monthlyRevenue,
+                'top_artisans' => $topArtisans
+            ]
+        ]);
     }
 }

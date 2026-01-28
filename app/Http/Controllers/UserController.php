@@ -19,6 +19,17 @@ class UserController extends Controller
         return new ApiResponseDefault(true, 'Berhasil Menampilkan Profile', $user);
     }
 
+    public function artisanShop($id)
+    {
+        $user = User::with('product')->find($id);
+
+        if (!$user || $user->role != 'artisan') {
+            return new ApiResponseDefault(false, 'Gagal mengambil data penjual!', null, 500);
+        }
+
+        return new ApiResponseDefault(true, "Berhasil mengambil data artisan!", $user);
+    }
+
     public function update(Request $request)
     {
         $user = User::find(Auth::id());
