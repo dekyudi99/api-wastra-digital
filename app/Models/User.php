@@ -13,6 +13,8 @@ use App\Models\Favorit;
 use App\Models\Order;
 use App\Models\Review;
 use App\Models\ShippingAddress;
+use App\Models\Conversation;
+use App\Models\Message;
 
 class User extends Authenticatable
 {
@@ -31,6 +33,8 @@ class User extends Authenticatable
         'password',
         'role',
         'profile_picture',
+        'isArtisan',
+        'saldo',
     ];
 
     /**
@@ -86,5 +90,20 @@ class User extends Authenticatable
 
     public function shipping_address() {
         return $this->hasMany(ShippingAddress::class, 'user_id', 'id');
+    }
+
+    public function conversations()
+    {
+        return $this->belongsToMany(
+            Conversation::class,
+            'conversation_user',
+            'user_id',
+            'conversation_id'
+        );
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
     }
 }

@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Services\OtpService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -40,18 +41,33 @@ class AuthController extends Controller
             'email'     => 'required|email|unique:users',
             'role'      => 'required|in:artisan,customer',
             'password'  => 'required|min:8',
+            'ktp'       => 'required_if:role,artisan|image|mimes:jpeg,png,jpg|max:2048',
+            'village'   => 'required_if:role,artisan|string',
         ], $messages);
 
         if ($validator->fails()) {
             return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
         }
 
-        $user = User::create([
-            'name'      => $request->name,
-            'email'     => $request->email,
-            'role'      => $request->role,
-            'password'  => Hash::make($request->password),
-        ]);
+        if ($request->role == 'artisan') {
+            $path = $request->file('ktp')->store('ktp', 'public');
+
+            $user = User::create([
+                'name'      => $request->name,
+                'email'     => $request->email,
+                'role'      => $request->role,
+                'password'  => Hash::make($request->password),
+                'ktp'       => $path,
+                'address'   => $request->village,
+            ]);
+        } else {
+            $user = User::create([
+                'name'      => $request->name,
+                'email'     => $request->email,
+                'role'      => $request->role,
+                'password'  => Hash::make($request->password),
+            ]);
+        }
 
         if (!$user) {
             return new ApiResponseDefault(false, 'Registrasi Gagal!', null, 422);

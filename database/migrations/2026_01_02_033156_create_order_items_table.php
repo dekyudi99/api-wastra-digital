@@ -19,6 +19,7 @@ return new class extends Migration
             $table->integer('price_at_purchase');
             $table->bigInteger('subtotal');
             $table->string('status')->default(null);
+            $table->boolean('is_commisioned')->default(0);
             $table->timestamps();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
             $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate();

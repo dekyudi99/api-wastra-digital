@@ -6,9 +6,12 @@ use Midtrans\Notification;
 use App\Http\Resources\ApiResponseDefault;
 use App\Models\TransactionHistory;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use App\Models\AdminCommision;
+use App\Models\User;
 
 class MidtransCallbackController extends Controller
 {
@@ -36,7 +39,6 @@ class MidtransCallbackController extends Controller
                     ]);
                 }
             } elseif ($notif->transaction_status == 'settlement') {
-                // Pembayaran berhasil (non-credit-card / selesai)
                 $order->update([
                     'status' => 'paid',
                 ]);
@@ -45,39 +47,78 @@ class MidtransCallbackController extends Controller
             } elseif (in_array($notif->transaction_status, ['cancel', 'expire', 'deny'])) {
                 return response()->json(['message' => 'Pembayaran gagal / dibatalkan'], 400);
             }
-            // Simpan riwayat transaksi
-            TransactionHistory::create([
-                'date' => now(),
-                'invoice_number' => $notif->order_id,
-                'channel' => $notif->payment_type,
-                'status' => $notif->transaction_status,
-                'value' => $notif->gross_amount,
-                'email_customer' => $notif->customer_details->email ?? $order->user->email ?? null,
-            ]);
+            
             try {
                 DB::transaction(function () use ($order, $notif) {
-                    // Update status order menjadi paid
-                    $order->update(['status' => 'paid']);
-                    // Pastikan relation items tersedia; gunakan eager relation kalau perlu
-                    $orderItems = $order->items()->get();
-                    foreach ($orderItems as $item) {
-                        // Ambil product via relation (pastikan relation product didefinisikan)
-                        $product = $item->product ?? Product::find($item->product_id);
-                        if (!$product) {
-                            // Jika produk tidak ditemukan, skip (atau bisa throw exception tergantung kebijakan)
-                            continue;
-                        }
-                        // Increment sold secara atomic
-                        $product->increment('sold', $item->quantity);
+
+                    // LOCK ORDER (ANTI DOUBLE CALLBACK)
+                    $order = Order::lockForUpdate()->find($order->id);
+
+                    if ($order->is_commissioned) {
+                        // Sudah pernah diproses → STOP
+                        return;
                     }
-                    // Simpan riwayat transaksi
+
+                    $order->update([
+                        'status' => 'paid',
+                        'is_commissioned' => true,
+                    ]);
+
+                    $orderItems = OrderItem::where('order_id', $order->id)
+                        ->where('is_commissioned', false)
+                        ->lockForUpdate()
+                        ->get();
+
+                    $adminCommission = AdminCommision::lockForUpdate()->first();
+
+                    foreach ($orderItems as $item) {
+
+                        // 🔒 LOCK PRODUCT
+                        $product = Product::lockForUpdate()->find($item->product_id);
+                        if (!$product) {
+                            throw new \Exception('Produk tidak ditemukan');
+                        }
+
+                        // ❗ CEK STOK (ANTI MINUS)
+                        if ($product->stock < $item->quantity) {
+                            throw new \Exception(
+                                "Stok produk {$product->id} tidak mencukupi"
+                            );
+                        }
+
+                        // ✅ KURANGI STOK + TAMBAH SOLD
+                        $product->decrement('stock', $item->quantity);
+                        $product->increment('sold', $item->quantity);
+
+                        // HITUNG KOMISI
+                        $gross = $item->total_price;
+                        $artisanAmount = intval($gross * 0.9);
+                        $adminAmount   = $gross - $artisanAmount;
+
+                        // 🔒 LOCK ARTISAN
+                        $artisan = User::lockForUpdate()->find($item->artisan_id);
+                        if (!$artisan) {
+                            throw new \Exception('Artisan tidak ditemukan');
+                        }
+
+                        // SALDO
+                        $artisan->increment('saldo', $artisanAmount);
+                        $adminCommission->increment('saldo', $adminAmount);
+
+                        // TANDAI ITEM SELESAI
+                        $item->update([
+                            'is_commissioned' => true,
+                            'status' => 'end',
+                        ]);
+                    }
+
                     TransactionHistory::create([
                         'date' => now(),
                         'invoice_number' => $notif->order_id,
                         'channel' => $notif->payment_type ?? null,
-                        'status' => $notif->transaction_status ?? 'paid',
-                        'value' => $notif->gross_amount ?? $order->total_amount ?? null,
-                        'email_customer' => $notif->customer_details->email ?? ($order->user->email ?? null),
+                        'status' => 'paid',
+                        'value' => $notif->gross_amount,
+                        'email_customer' => $order->user->email ?? null,
                     ]);
                 });
             } catch (Exception $e) {

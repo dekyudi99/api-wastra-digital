@@ -9,6 +9,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShippingAddressController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\TransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +24,11 @@ use App\Http\Controllers\ShippingAddressController;
 */
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/conversations', [MessageController::class, 'index']);
+    Route::post('/conversations/{id}', [MessageController::class, 'getOrCreateConversation']);
+    Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'getMessages']);
+    Route::post('/messages/{conversationId}', [MessageController::class, 'sendMessage']);
+
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/send-token', [AuthController::class, 'sendToken']);
     Route::post('/auth/email-verify', [AuthController::class, 'verifyEmail']);
@@ -65,6 +72,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/order/in', [OrderController::class, 'orderIn']);
         Route::put('/order/update-status/{id}', [OrderController::class, 'updateStatus']);
+
+        Route::get('/saldo/get', [TransactionController::class, 'saldoUser']);
+        Route::get('/commision/get', [TransactionController::class, 'commision']);
     });
 
     Route::middleware('role:admin')->group(function () {

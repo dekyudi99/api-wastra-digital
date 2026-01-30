@@ -18,6 +18,10 @@ return new class extends Migration
             $table->string('phone');
             $table->enum('role', ['admin', 'pengerajin', 'pengguna'])->default('pengguna');
             $table->text('profile_picture')->nullable();
+            $table->boolean('isArtisan')->default(0);
+            $table->string('ktp')->default(null);
+            $table->text('address')->default(null);
+            $table->bigInteger('saldo')->default(0);
             $table->boolean('email_verified')->default(0);
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
