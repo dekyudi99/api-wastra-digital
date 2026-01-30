@@ -11,6 +11,10 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShippingAddressController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\TransactionController;
+use Illuminate\Http\Request;
+use App\Models\AiInsightLog;
+use App\Http\Controllers\AiInsightController;
+use App\Http\Controllers\AiRecommendationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +26,47 @@ use App\Http\Controllers\TransactionController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+Route::prefix('ai')->group(function () {
+    Route::get('/buyer',  [AiInsightController::class, 'buyerInsight']);
+    Route::get('/seller', [AiInsightController::class, 'sellerInsight']);
+});
+
+Route::middleware('auth:sanctum')->get(
+    '/ai/seller/stock-discount',
+    [AiInsightController::class, 'stockAndDiscountInsight']
+);
+
+Route::middleware(['auth:sanctum'])->post(
+    '/ai/seller/tenun-guide',
+    [AiInsightController::class, 'tenunGuide']
+);
+
+// Route::middleware('auth:sanctum')->get('/ai/seller/design-preview', [AiInsightController::class, 'designPreview']);
+
+Route::middleware('auth:sanctum')->post(
+    '/ai/recommendation/{id}/approve',
+    [AiRecommendationController::class, 'approve']
+);
+
+Route::middleware('auth:sanctum')->get(
+    '/ai/seller/health-score',
+    [AiInsightController::class, 'productHealthScore']
+);
+
+Route::patch('/admin/ai-insight/{id}/score', function (
+    Request $request,
+    $id
+) {
+    $log = AiInsightLog::findOrFail($id);
+
+    $log->update([
+        'manual_score' => $request->score, // 1–5
+        'manual_note'  => $request->note,
+    ]);
+
+    return response()->json(['success' => true]);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations', [MessageController::class, 'index']);

@@ -88,7 +88,7 @@ class MidtransCallbackController extends Controller
 
                         // ✅ KURANGI STOK + TAMBAH SOLD
                         $product->decrement('stock', $item->quantity);
-                        $product->increment('sold', $item->quantity);
+                        $product->increment('sales', $item->quantity);
 
                         // HITUNG KOMISI
                         $gross = $item->total_price;

@@ -22,6 +22,7 @@ class Product extends Model
         'description',
         'category',
         'stock',
+        'sales',
         'material',
         'wide',
         'long',
