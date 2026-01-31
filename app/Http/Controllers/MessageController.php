@@ -150,7 +150,7 @@ class MessageController extends Controller
             'body'            => $request->body
         ]);
 
-        broadcast(new MessageSent($message))->toOthers();
+        // broadcast(new MessageSent($message))->toOthers();
 
         return new ApiResponseDefault(
             true,
