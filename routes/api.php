@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Models\AiInsightLog;
 use App\Http\Controllers\AiInsightController;
 use App\Http\Controllers\AiRecommendationController;
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -125,6 +126,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/order', [OrderController::class, 'order']);
         Route::get('/admin/dashboard-stats', [OrderController::class, 'adminDashboardStats']);
+
+        Route::get('/admin/totalisArtisan', [AdminController::class, 'totalPendaftaran']);
+        Route::get('/admin/artisan/list', [AdminController::class, 'listPendaftaran']);
+        Route::put('/admin/confirm/{id}', [AdminController::class, 'confirm']);
+        Route::get('/admin/total/artisan/active', [AdminController::class, 'totalActiveArtisan']);
+        Route::get('/admin/listActiveArtisan', [AdminController::class, 'listActiveArtisan']);
+        Route::put('/admin/deactive/{id}', [AdminController::class, 'confirm']);
     });
 });
 
@@ -133,10 +141,10 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
 
+Route::get('/artisan/shop/{id}', [UserController::class, 'artisanShop']);
 Route::get('/product', [ProductController::class, 'index']);
 Route::get('/product/songket', [ProductController::class, 'songket']);
 Route::get('/product/endek', [ProductController::class, 'endek']);
 Route::get('/product/{id}', [ProductController::class, 'show']);
 
 Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);
-Route::get('/artisan/shop/{id}', [UserController::class, 'artisanShop']);

@@ -47,13 +47,22 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected $appends = ['profile'];
+    protected $appends = ['profile', 'ktp_url'];
 
     public function getProfileAttribute()
     {
         if ($this->profile_picture) 
         {
             return (env('APP_URL').'/storage/'.$this->profile_picture);
+        }
+        return null;
+    }
+
+    public function getKtpUrlAttribute()
+    {
+        if ($this->ktp)
+        {
+            return (env('APP_URL').'/ktp/'.$this->ktp);
         }
         return null;
     }
