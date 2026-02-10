@@ -18,12 +18,13 @@ return new class extends Migration
             $table->text('description');
             $table->enum('category', ['Endek', 'Songket']);
             $table->integer('stock');
+            $table->integer('sales')->default(0);
             $table->string('material');
             $table->integer('wide');
             $table->integer('long');
-            $table->integer('discount')->default(null);
+            $table->integer('discount')->nullable();
             $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
-            $table->foreignId('user_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->foreignId('artisan_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamps();
         });
     }

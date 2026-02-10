@@ -11,6 +11,8 @@
     - `php artisan storage:link` or `ln -s ../storage/app/public public/storage` for linux
 - Midtrans
     - `composer require midtrans/midtrans-php`
+- Pusher
+    - `composer require pusher/pusher-php-server`
 
 # Cara Menjalankan
 - `composer install` menginstall dependensi
@@ -19,6 +21,7 @@
 - `php artisan key:generate` membuat key aplikasi laravel
 - `php artisan migrate` membuat database
 - `php -S localhost:8000 -t public` menjalankan laravel di jaringan lokal
+- `php artisan queue:work --tries=5 --timeout=60 --backoff=10` Menjalankan queue dengan parameter tertentu
 
 # Midtran Payment Simulator
 `[Midtran Payment Simulator](https://simulator.sandbox.midtrans.com/)`

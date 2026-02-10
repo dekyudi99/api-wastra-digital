@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reviews', function (Blueprint $table) {
+        Schema::create('withdrawals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnUpdate();
-            $table->foreignId('order_item_id')->constrained('products')->cascadeOnUpdate()->cascadeOnDelete();
-            $table->tinyInteger('rating');
-            $table->string('comment');
+            $table->foreignId('seller_id')->constrained('users')->cascadeOnUpdate();
+            $table->bigInteger('amount');
+            $table->string('bank_name');
+            $table->string('bank_account');
+            $table->enum('status', ['pending', 'approved', 'paid', 'rejected'])->default('pending');
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('reviews');
+        Schema::dropIfExists('withdrawals');
     }
 };

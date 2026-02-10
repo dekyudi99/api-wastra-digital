@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\PaymentController;
 use App\Http\Resources\ApiResponseDefault;
 use App\Models\User;
+use App\Services\AuditLogger;
 
 class OrderController extends Controller
 {
@@ -178,40 +179,45 @@ class OrderController extends Controller
 
         try {
             $order = DB::transaction(function () use ($cartItems, $idUser, $request, $selectedCartIds) {
-                
-                $totalAmount = 0;
-                foreach ($cartItems as $item) {
-                    if (!$item->product || $item->product->stock < $item->quantity) {
-                        throw new \Exception('Stok produk ' . $item->product->name . ' tidak mencukupi.');
-                    }
-                    $totalAmount += $item->product->last_price * $item->quantity;
-                }
 
-                $newOrder = Order::create([
-                    'user_id' => $idUser,
-                    'invoice_number' => 'INV-' . time(),
-                    'total_amount' => $totalAmount,
-                    'shipping_address' => $request->input('shipping_address'),
-                    'status' => 'unpaid',
+            $totalAmount = 0;
+
+            foreach ($cartItems as $item) {
+                if ($item->product->stock < $item->quantity) {
+                    throw new \Exception('Stok tidak cukup');
+                }
+                $totalAmount += $item->product->last_price * $item->quantity;
+            }
+
+            $order = Order::create([
+                'customer_id' => $idUser,
+                'order_code' => 'INV-' . time(),
+                'order_status' => 'pending',
+                'payment_status' => 'unpaid',
+                'total_amount' => $totalAmount,
+                'shipping_address' => $request->shipping_address,
+            ]);
+
+            foreach ($cartItems as $item) {
+                OrderItem::create([
+                    'order_id'   => $order->id,
+                    'product_id' => $item->product_id,
+                    'artisan_id' => $item->product->artisan_id,
+                    'price_at_purchase'      => $item->product->last_price,
+                    'name_at_purchase'      => $item->product->name,
+                    'description_at_purchase'      => $item->product->description,
+                    'quantity'   => $item->quantity,
+                    'subtotal'   => $item->quantity * $item->product->last_price,
+                    'item_status'=> 'pending',
                 ]);
 
-                foreach ($cartItems as $item) {
-                    OrderItem::create([
-                        'order_id' => $newOrder->id,
-                        'product_id' => $item->product_id,
-                        'quantity' => $item->quantity,
-                        'name_at_purchase' => $item->product->name,
-                        'price_at_purchase' => $item->product->last_price,
-                        'description_at_purchase' => $item->product->description,
-                        'subtotal' => $item->quantity * $item->product->last_price,
-                    ]);
-                    $item->product->decrement('stock', $item->quantity);
-                }
-                
-                Cart::whereIn('id', $selectedCartIds)->delete();
+                $item->product->decrement('stock', $item->quantity);
+            }
 
-                return $newOrder;
-            });
+            Cart::whereIn('id', $selectedCartIds)->delete();
+
+            return $order;
+        });
 
             $paymentController = new PaymentController();
 
@@ -262,8 +268,8 @@ class OrderController extends Controller
             $order = DB::transaction(function () use ($idUser, $product, $quantity, $request) {
                 
                 $newOrder = Order::create([
-                    'user_id' => $idUser,
-                    'invoice_number' => 'INV-' . time(),
+                    'customer_id' => $idUser,
+                    'order_code' => 'INV-' . time(),
                     'total_amount' => $quantity * $product->last_price,
                     'shipping_address' => $request->input('shipping_address'),
                     'status' => 'unpaid',
@@ -277,6 +283,7 @@ class OrderController extends Controller
                     'price_at_purchase' => $product->last_price,
                     'description_at_purchase' => $product->description,
                     'subtotal' => $quantity * $product->last_price,
+                    'artisan_id' => $product->artisan_id
                 ]);
 
                 $product->decrement('stock', $quantity);
@@ -347,59 +354,18 @@ class OrderController extends Controller
 
         // Ambil Order yang memiliki item milik pengrajin ini
         $orders = Order::whereHas('item.product', function ($query) use ($artisanId) {
-                $query->where('user_id', $artisanId);
+                $query->where('artisan_id', $artisanId);
             })
-            ->with(['user', 'item' => function ($query) use ($artisanId) {
+            ->with(['buyer', 'item' => function ($query) use ($artisanId) {
                 // Eager load HANYA item milik pengrajin ini
                 $query->whereHas('product', function ($q) use ($artisanId) {
-                    $q->where('user_id', $artisanId);
+                    $q->where('artisan_id', $artisanId);
                 })->with('product');
             }])
             ->latest()
             ->get();
 
         return new ApiResponseDefault(true, 'Daftar pesanan masuk berhasil diambil', $orders);
-    }
-
-    public function updateStatus(Request $request, $orderItemId)
-    {
-        $item = OrderItem::find($orderItemId);
-
-        if (!$item) {
-            return new ApiResponseDefault(false, 'Item pesanan tidak ditemukan!', null, 404);
-        }
-
-        $user = Auth::user();
-        $requestStatus = $request->status;
-
-        // LOGIKA PENJUAL (Artisan)
-        if ($user->role === 'artisan') {
-            // Validasi otoritas: Apakah produk ini milik dia?
-            if ($item->product->user_id !== $user->id) {
-                return new ApiResponseDefault(false, 'Akses ditolak!', null, 403);
-            }
-
-            $allowedStatus = ['processing', 'shipped', 'cancelled'];
-            if (!in_array($requestStatus, $allowedStatus)) {
-                return new ApiResponseDefault(false, 'Status tidak valid untuk penjual', 422);
-            }
-        } 
-        // LOGIKA PEMBELI (Customer)
-        else if ($user->role === 'customer') {
-            // Validasi otoritas: Apakah ini order milik dia?
-            if ($item->order->user_id !== $user->id) {
-                return new ApiResponseDefault(false, 'Ini bukan pesanan Anda!', null, 403);
-            }
-
-            // Pembeli hanya boleh mengubah ke 'delivered' jika status saat ini 'shipped'
-            if ($requestStatus !== 'delivered' || $item->status !== 'shipped') {
-                return new ApiResponseDefault(false, 'Anda hanya bisa mengonfirmasi pesanan yang sudah dikirim', 422);
-            }
-        }
-
-        $item->update(['status' => $requestStatus]);
-
-        return new ApiResponseDefault(true, 'Status item berhasil diperbarui!', $item);
     }
 
     public function adminDashboardStats()

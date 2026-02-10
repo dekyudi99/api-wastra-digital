@@ -60,7 +60,7 @@ class ProductController extends Controller
 
     public function myProduct()
     {
-        $product = Product::where('user_id', Auth::id())->get();
+        $product = Product::where('artisan_id', Auth::id())->get();
 
         if ($product->isEmpty()) {
             return new ApiResponseDefault(false, "Anda belum punya produk!");
@@ -122,7 +122,7 @@ class ProductController extends Controller
             'wide' => $request->wide,
             'long' => $request->long,
             'discount' => $request->discount,
-            'user_id' => $userId,
+            'artisan_id' => $userId,
         ]);
 
         if ($request->hasFile("image")) {

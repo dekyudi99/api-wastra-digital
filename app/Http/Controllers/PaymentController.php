@@ -18,22 +18,27 @@ class PaymentController extends Controller
         Config::$isSanitized = true;
         Config::$is3ds = true;
 
-        $order= Order::findOrFail($id);
-        if ($order->status != "unpaid") {
+        $order= Order::find($id);
+
+        if (!$order) {
+            return new ApiResponseDefault(false, "Pesanan tidak ditemukan!", null, 404);
+        }
+
+        if ($order->payment_status != "unpaid") {
             return new ApiResponseDefault(false, "Pesanan sudah selesai atau dibatalkan!", null, 403);
         }
 
         if ($order->created_at->diffInMinutes(now()) > 15) {
-            $order->update(['status' => 'cancelled']);
+            $order->update(['order_status' => 'cancelled']);
             return new ApiResponseDefault(false, "Waktu pembayaran habis!", null, 400);
         }
         
-        $transactionHistory = TransactionHistory::where('invoice_number', $order->invoice_number)->first();
+        $transactionHistory = TransactionHistory::where('order_id', $order->id)->first();
 
         if (!$transactionHistory) {
             $params = [
                 'transaction_details' => [
-                    'order_id' => $order->invoice_number,
+                    'order_id' => $order->order_code,
                     'gross_amount' => $order->total_amount,
                 ],
                 'customer_details' => [

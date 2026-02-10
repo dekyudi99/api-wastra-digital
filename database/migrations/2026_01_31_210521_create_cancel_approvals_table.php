@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('favorits', function (Blueprint $table) {
+        Schema::create('cancel_approvals', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete()->cascadeOnUpdate();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignId('cancel_request_id')->constrained('cancel_requests')->cascadeOnUpdate();
+            $table->enum('role', ['admin', 'artisan']);
+            $table->boolean('approved');
+            $table->string('note');
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('favorits');
+        Schema::dropIfExists('cancel_approvals');
     }
 };

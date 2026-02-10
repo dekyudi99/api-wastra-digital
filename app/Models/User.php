@@ -9,12 +9,16 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Product;
 use App\Models\Cart;
-use App\Models\Favorit;
 use App\Models\Order;
 use App\Models\Review;
 use App\Models\ShippingAddress;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\OrderItem;
+use App\Models\Wallet;
+use App\Models\Withdrawal;
+use App\Models\CancelRequest;
+use App\Models\AuditLog;
 
 class User extends Authenticatable
 {
@@ -29,11 +33,15 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
-        'email_verified',
-        'password',
         'role',
         'profile_picture',
-        'isArtisan',
+        'status',
+        'ktp',
+        'address',
+        'email_verified',
+        'email_verified_at',
+        'is_delete',
+        'password',
         'saldo',
     ];
 
@@ -77,20 +85,28 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    public function auditLog() {
+        return $this->hasMany(AuditLog::class, 'actor_id', 'íd');
+    }
+
+    public function withdrawal() {
+        return $this->hasMany(Withdrawal::class, 'seller_id', 'id');
+    }
+
+    public function wallet() {
+        return $this->hasOne(Wallet::class, 'owner_id', 'id');
+    }
+
     public function product() {
-        return $this->hasMany(Product::class, 'user_id', 'id');
+        return $this->hasMany(Product::class, 'artisan_id', 'id');
     }
 
     public function cart() {
         return $this->hasMany(Cart::class, 'product_id', 'id');
     }
 
-    public function favorit() {
-        return $this->hasMany(Favorit::class, 'product_id', 'id');
-    }
-
     public function order() {
-        return $this->hasMany(Order::class, 'user_id', 'id');
+        return $this->hasMany(Order::class, 'customer_id', 'id');
     }
 
     public function review() {
@@ -114,5 +130,13 @@ class User extends Authenticatable
     public function messages()
     {
         return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function order_item() {
+        return $this->hasMany(OrderItem::class, 'user_id', 'id');
+    }
+
+    public function cancel_request() {
+        return $this->hasMany(CancelRequest::class, 'customer_id', 'id');
     }
 }

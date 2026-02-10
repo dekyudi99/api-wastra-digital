@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transaction_histories', function (Blueprint $table) {
+        Schema::create('refunds', function (Blueprint $table) {
             $table->id();
-            $table->timestamp('date')->nullable();
+            $table->foreignId('cancel_request_id')->constrained('cancel_requests')->cascadeOnUpdate();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
-            $table->string('midtrans_order_id');
-            $table->string('payment_type');
-            $table->string('status');
-            $table->bigInteger('gross_amount');
-            $table->json('payload');
-            $table->string('email_customer');
+            $table->string('midtrans_refund_key')->unique();
+            $table->bigInteger('amount');
+            $table->enum('status', ['pending', 'success', 'failed'])->default('pending');
+            $table->json('response');
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transaction_histories');
+        Schema::dropIfExists('refunds');
     }
 };

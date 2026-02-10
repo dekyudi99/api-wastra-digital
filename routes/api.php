@@ -16,6 +16,9 @@ use App\Models\AiInsightLog;
 use App\Http\Controllers\AiInsightController;
 use App\Http\Controllers\AiRecommendationController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\OrderItemController;
+use App\Http\Controllers\CancelController;
+use App\Http\Controllers\WithdrawController;
 
 /*
 |--------------------------------------------------------------------------
@@ -108,6 +111,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/address/update/{id}', [ShippingAddressController::class, 'update']);
         Route::delete('/address/delete/{id}', [ShippingAddressController::class, 'delete']);
         Route::get('/address/{id}', [ShippingAddressController::class, 'show']);
+
+        Route::post('/order-items/{id}/confirm', [OrderItemController::class, 'confirmReceived']);
+        Route::post('/cancel/{orderItemId}', [CancelController::class, 'request']);
     });
 
     Route::middleware('role:artisan')->group(function () {
@@ -117,12 +123,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/product/delete/{id}', [ProductController::class, 'delete']);
 
         Route::get('/order/in', [OrderController::class, 'orderIn']);
-        Route::put('/order/update-status/{id}', [OrderController::class, 'updateStatus']);
 
-        Route::get('/saldo/get', [TransactionController::class, 'saldoUser']);
-        Route::get('/commision/get', [TransactionController::class, 'commision']);
+        Route::post('/order-items/{id}/status', [OrderItemController::class, 'updateStatus']);
+
+        Route::post('/cancel/{id}/seller-approve', [CancelController::class, 'sellerApprove']);
+
+        Route::post('/withdraw/request', [WithdrawController::class, 'requestWithdraw']);
     });
-
+        
     Route::middleware('role:admin')->group(function () {
         Route::get('/order', [OrderController::class, 'order']);
         Route::get('/admin/dashboard-stats', [OrderController::class, 'adminDashboardStats']);
@@ -133,13 +141,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/total/artisan/active', [AdminController::class, 'totalActiveArtisan']);
         Route::get('/admin/listActiveArtisan', [AdminController::class, 'listActiveArtisan']);
         Route::put('/admin/deactive/{id}', [AdminController::class, 'confirm']);
+        Route::post('/cancel/{id}/admin-approve', [CancelController::class, 'adminApprove']);
+
+        Route::post('/withdraw/approve/{id}', [WithdrawController::class, 'approve']);
+        Route::post('/withdraw/markpaid/{id}', [WithdrawController::class, 'markPaid']);
     });
 });
 
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
-Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle']);
+Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle'])->middleware('throttle:20,1');;
 
 Route::get('/artisan/shop/{id}', [UserController::class, 'artisanShop']);
 Route::get('/product', [ProductController::class, 'index']);

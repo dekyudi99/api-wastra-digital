@@ -66,6 +66,7 @@ class AuthController extends Controller
                 'email'     => $request->email,
                 'role'      => $request->role,
                 'password'  => Hash::make($request->password),
+                'status'    => 'approved',
             ]);
         }
 
@@ -185,6 +186,7 @@ class AuthController extends Controller
 
         $user = User::where('id', Auth::user()->id)->first();
         $user->email_verified = 1;
+        $user->email_verified_at = now();
         $user->save();
 
         return new ApiResponseDefault(true, 'Verifikasi Email Berhasil', Null);

@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
-use App\Models\Product;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\OrderItem;
 
 class Review extends Model
 {
@@ -14,7 +13,7 @@ class Review extends Model
 
     protected $fillable = [
         'user_id',
-        'product_id',
+        'order_item_id',
         'comment',
         'rating',
     ];
@@ -31,7 +30,7 @@ class Review extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function product() {
-        return $this->belongsTo(Product::class, 'product_id', 'id');
+    public function order_item() {
+        return $this->belongsTo(OrderItem::class, 'order_item_id', 'id');
     }
 }

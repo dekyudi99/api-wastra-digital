@@ -1,130 +1,82 @@
 <?php
 namespace App\Http\Controllers;
 
-use Midtrans\Config;
-use Midtrans\Notification;
-use App\Http\Resources\ApiResponseDefault;
-use App\Models\TransactionHistory;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
-use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\AdminCommision;
-use App\Models\User;
+use App\Models\Order;
+use App\Models\TransactionHistory;
+use Midtrans\Config;
+use App\Jobs\ProcessSettledOrder;
 
 class MidtransCallbackController extends Controller
 {
-    public function handle()
+    public function handle(Request $request)
     {
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = (bool) env('MIDTRANS_IS_PRODUCTION');
+        $request->validate([
+            'order_id' => 'required|string',
+            'status_code' => 'required|string',
+            'gross_amount' => 'required',
+            'signature_key' => 'required|string',
+            'transaction_status' => 'required|string',
+        ]);
 
-        try {
-            $notif = new Notification();
-        } catch (\Exception $e) {
-            return new ApiResponseDefault(false, 'Gagal Mendapatkan Notifikasi Dari Midtrans: '.$e, null, 400);
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
+
+        $signature = hash(
+            'sha512',
+            $request->order_id .
+            $request->status_code .
+            $request->gross_amount .
+            config('midtrans.server_key')
+        );
+
+        if ($signature !== $request->signature_key) {
+            return response()->json(['message' => 'Invalid signature'], 403);
         }
 
-        $order = Order::where('invoice_number', $notif->order_id)->first();
+        $order = Order::lockForUpdate()
+            ->where('order_code', $request->order_id)
+            ->firstOrFail();
 
-        if (!$order) {
-            return new ApiResponseDefault(false, 'Pesanan Tidak Ditemukan!', null, 404);
-        } else {
-            if ($notif->transaction_status == 'capture') {
-                if ($notif->fraud_status == 'accept') {
-                    // Card payment berhasil
-                    $order->update([
-                        'status' => 'paid',
-                    ]);
+        $shouldDispatch = false;
+
+        DB::transaction(function () use ($request, $order, &$shouldDispatch) {
+
+            TransactionHistory::updateOrCreate(
+                [
+                    'order_id' => $order->id,
+                    'midtrans_order_id' => $request->order_id,
+                ],
+                [
+                    'date' => $request->transaction_time ?? now(),
+                    'payment_type' => $request->payment_type,
+                    'gross_amount' => (int) $request->gross_amount,
+                    'status' => $request->transaction_status,
+                    'email_customer' => data_get($request->customer_details, 'email'),
+                    'payload' => json_encode($request->all()),
+                ]
+            );
+
+            if (
+                in_array($request->transaction_status, ['capture', 'settlement']) &&
+                ($request->fraud_status ?? 'accept') === 'accept'
+            ) {
+                if ($order->payment_status !== 'settled') {
+                    $order->update(['payment_status' => 'settled']);
+                    $shouldDispatch = true;
                 }
-            } elseif ($notif->transaction_status == 'settlement') {
-                $order->update([
-                    'status' => 'paid',
-                ]);
-            } elseif ($notif->transaction_status == 'pending') {
-                return response()->json(['message' => 'Menunggu Pembayaran'], 200);
-            } elseif (in_array($notif->transaction_status, ['cancel', 'expire', 'deny'])) {
-                return response()->json(['message' => 'Pembayaran gagal / dibatalkan'], 400);
             }
-            
-            try {
-                DB::transaction(function () use ($order, $notif) {
 
-                    // LOCK ORDER (ANTI DOUBLE CALLBACK)
-                    $order = Order::lockForUpdate()->find($order->id);
-
-                    if ($order->is_commissioned) {
-                        // Sudah pernah diproses → STOP
-                        return;
-                    }
-
-                    $order->update([
-                        'status' => 'paid',
-                        'is_commissioned' => true,
-                    ]);
-
-                    $orderItems = OrderItem::where('order_id', $order->id)
-                        ->where('is_commissioned', false)
-                        ->lockForUpdate()
-                        ->get();
-
-                    $adminCommission = AdminCommision::lockForUpdate()->first();
-
-                    foreach ($orderItems as $item) {
-
-                        // 🔒 LOCK PRODUCT
-                        $product = Product::lockForUpdate()->find($item->product_id);
-                        if (!$product) {
-                            throw new \Exception('Produk tidak ditemukan');
-                        }
-
-                        // ❗ CEK STOK (ANTI MINUS)
-                        if ($product->stock < $item->quantity) {
-                            throw new \Exception(
-                                "Stok produk {$product->id} tidak mencukupi"
-                            );
-                        }
-
-                        // ✅ KURANGI STOK + TAMBAH SOLD
-                        $product->decrement('stock', $item->quantity);
-                        $product->increment('sales', $item->quantity);
-
-                        // HITUNG KOMISI
-                        $gross = $item->total_price;
-                        $artisanAmount = intval($gross * 0.9);
-                        $adminAmount   = $gross - $artisanAmount;
-
-                        // 🔒 LOCK ARTISAN
-                        $artisan = User::lockForUpdate()->find($item->artisan_id);
-                        if (!$artisan) {
-                            throw new \Exception('Artisan tidak ditemukan');
-                        }
-
-                        // SALDO
-                        $artisan->increment('saldo', $artisanAmount);
-                        $adminCommission->increment('saldo', $adminAmount);
-
-                        // TANDAI ITEM SELESAI
-                        $item->update([
-                            'is_commissioned' => true,
-                            'status' => 'end',
-                        ]);
-                    }
-
-                    TransactionHistory::create([
-                        'date' => now(),
-                        'invoice_number' => $notif->order_id,
-                        'channel' => $notif->payment_type ?? null,
-                        'status' => 'paid',
-                        'value' => $notif->gross_amount,
-                        'email_customer' => $order->user->email ?? null,
-                    ]);
-                });
-            } catch (Exception $e) {
-                return new ApiResponseDefault(false, 'Gagal memproses order: ' . $e->getMessage(), null, 500);
+            if (in_array($request->transaction_status, ['cancel', 'deny', 'expire'])) {
+                $order->update(['payment_status' => 'failed']);
             }
-            return response()->json(['message' => 'Callback processed successfully'], 200);
+        });
+
+        if ($shouldDispatch) {
+            ProcessSettledOrder::dispatch($order->id);
         }
+
+        return response()->json(['message' => 'Callback processed'], 200);
     }
 }

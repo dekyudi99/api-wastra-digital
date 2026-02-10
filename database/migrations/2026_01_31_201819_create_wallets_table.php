@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('admin_commisions', function (Blueprint $table) {
+        Schema::create('wallets', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('saldo')->default(0);
+            $table->enum('owner_type', ['admin', 'artisan']);
+            $table->foreignId('owner_id')->constrained('users')->cascadeOnUpdate();
+            $table->bigInteger('balance');
             $table->timestamps();
         });
     }
@@ -23,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('admin_commisions');
+        Schema::dropIfExists('wallets');
     }
 };

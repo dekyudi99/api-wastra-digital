@@ -14,15 +14,18 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->integer('quantity');
+            $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
+            $table->foreignId('artisan_id')->constrained('users')->cascadeOnUpdate();
+            $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate();
             $table->string('name_at_purchase');
             $table->text('description_at_purchase');
             $table->integer('price_at_purchase');
+            $table->enum('item_status', ['pending', 'processing', 'shipped', 'completed', 'cancelled'])->default('pending');
+            $table->boolean('is_processed')->default(0);
+            $table->timestamp('shipped_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->bigInteger('subtotal');
-            $table->string('status')->default(null);
-            $table->boolean('is_commisioned')->default(0);
             $table->timestamps();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnUpdate();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnUpdate();
         });
     }
 

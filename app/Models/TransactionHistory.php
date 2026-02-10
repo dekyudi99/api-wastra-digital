@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Order;
 
 class TransactionHistory extends Model
 {
@@ -11,10 +12,17 @@ class TransactionHistory extends Model
 
     protected $fillable = [
         'date',
+        'order_id',
+        'midtrans_order_id',
         'invoice_number',
-        'channel',
+        'payment_type',
         'status',
-        'value',
+        'gross_amount',
+        'payload',
         'email_customer',
     ];
+
+    public function order() {
+        return $this->belongsTo(Order::class, 'order_id', 'id');
+    }
 }
