@@ -14,6 +14,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Resources\ApiResponseDefault;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Models\Wallet;
 
 class OrderController extends Controller
 {
@@ -305,17 +306,49 @@ class OrderController extends Controller
         }
     }
 
-    public function myOrder() {
+    public function myOrder(Request $request) {
         $id = Auth::id();
-        $order = Order::where('user_id', $id)
-                   ->orderBy('created_at', 'desc')
-                   ->get();
+        // Ambil status dari query parameter, misal: ?status=pending
+        $status = $request->query('status'); 
 
-        if (!$order) {
-            return new ApiResponseDefault(false, 'Gagal Mengambil Data Pesanan!', null, 500);
+        $query = Order::where('customer_id', $id);
+
+        if ($status && $status !== 'semua') {
+            if ($status === 'unpaid') {
+                $query->where('payment_status', $status)->whereNot('order_status', 'cancelled');
+            } else {
+                // Hanya ambil ORDER yang memiliki ITEM dengan status tersebut
+                $query->whereNot('payment_status', 'unpaid')->whereHas('items', function ($q) use ($status) {
+                    $q->where('item_status', $status);
+                });
+    
+                // Filter relasi ITEMS agar hanya item dengan status tersebut yang muncul di dalam array
+                $query->with(['items' => function ($q) use ($status) {
+                    $q->where('item_status', $status);
+                }]);
+            }
+        } else {
+            $query->with('items');
         }
 
+        $order = $query->orderBy('created_at', 'desc')->paginate(5);
+
+        // Jangan pakai if (!$order), paginate selalu mengembalikan objek lengthAwarePaginator
         return new ApiResponseDefault(true, 'Berhasil Mengambil Data Pesanan!', $order);
+    }
+
+    public function detailOrder($id) {
+        $orderItem = OrderItem::with('order')->find($id);
+
+        if (!$orderItem) {
+            return new ApiResponseDefault(false, "Pesanan tidak ditemukan!", null, 404);
+        }
+
+        if ($orderItem->order->customer_id != Auth::id()) {
+            return new ApiResponseDefault(false, "Ini bukan pesanan anda!", null, 403);
+        }
+
+        return new ApiResponseDefault(true, "Detail pesanan berhasil ditampilkan!", $orderItem);
     }
 
     // untuk admin melihat semua pesanan
@@ -331,16 +364,21 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $artisanId = Auth::id();
+        if (Auth::user()->role == 'artisan') {
+            $artisanId = Auth::id();
+    
+            $order = OrderItem::whereHas('product', function ($q) use ($artisanId) {
+                $q->where('artisan_id', $artisanId);
+            })->with('order', 'order.buyer')->find($id);            
+            if (!$order) {
+                return new ApiResponseDefault(false, 'Pesanan tidak ditemukan!', null, 404);
+            }
+    
+            return new ApiResponseDefault(true, 'Detail pesanan berhasil ditampilkan', [$order]);
+        } elseif (Auth::user()->role == 'customer') {
+            $order = Order::where('customer_id', Auth::id())->with('items')->find($id);
+        }
 
-        $order = Order::with(['user', 'item' => function ($query) use ($artisanId) {
-                $query->whereHas('product', function ($q) use ($artisanId) {
-                    $q->where('user_id', $artisanId);
-                })->with('product');
-            }])
-            ->find($id);
-
-        // Keamanan: Jika order ada tapi tidak punya item milik artisan ini, tolak.
         if (!$order) {
             return new ApiResponseDefault(false, 'Pesanan tidak ditemukan!', null, 404);
         }
@@ -348,24 +386,74 @@ class OrderController extends Controller
         return new ApiResponseDefault(true, 'Detail pesanan berhasil ditampilkan', $order);
     }
 
-    public function orderIn()
+    public function orderUnpaid()
+    {
+        $order = Order::where('customer_id', Auth::id())->orderBy('created_at', 'desc')->paginate(5);
+
+        if ($order->isEmpty()) {
+            return new ApiResponseDefault(true, "Belum ada pesanan!");
+        }
+
+        return new ApiResponseDefault(true, "Berhasil menampilkan pesanan!", $order);
+    }
+
+    public function orderIn(Request $request)
     {
         $artisanId = Auth::id();
+        $status = $request->query('status', 'all');
 
-        // Ambil Order yang memiliki item milik pengrajin ini
-        $orders = Order::whereHas('item.product', function ($query) use ($artisanId) {
-                $query->where('artisan_id', $artisanId);
-            })
-            ->with(['buyer', 'item' => function ($query) use ($artisanId) {
-                // Eager load HANYA item milik pengrajin ini
-                $query->whereHas('product', function ($q) use ($artisanId) {
-                    $q->where('artisan_id', $artisanId);
-                })->with('product');
-            }])
-            ->latest()
-            ->get();
+        $query = OrderItem::whereHas('product', function ($q) use ($artisanId) {
+                $q->where('artisan_id', $artisanId);
+            });
 
-        return new ApiResponseDefault(true, 'Daftar pesanan masuk berhasil diambil', $orders);
+        if ($status !== 'all') {
+            $query->where('item_status', $status);
+        }
+
+        $orderItem = $query->with('order', 'order.buyer')
+        ->latest()
+        ->paginate(5);
+
+        return new ApiResponseDefault(true, 'Daftar pesanan masuk berhasil diambil', $orderItem);
+    }
+
+    public function orderInNewer() {
+        $artisanId = Auth::id();
+        $orderItem = OrderItem::whereHas('product', function ($q) use ($artisanId){
+            $q->where('artisan_id', $artisanId);
+        })->whereHas('order', function ($q) {
+            $q->where('payment_status', 'settled');
+        })->whereNot('item_status', ['cancelled', 'completed', 'finish'])->latest()->take(5)->get();
+
+        if ($orderItem->isEmpty()) {
+            return new ApiResponseDefault(true, "Tidak ada pesanan terbaru!");
+        }
+
+        return new ApiResponseDefault(true, "Pesanan berhasil ditampilkan!", $orderItem);
+    }
+
+    public function totalTransaction()
+    {
+        $artisanId = Auth::id();
+        $orderAll = OrderItem::whereHas('product', function ($q) use ($artisanId){
+            $q->where('artisan_id', $artisanId);
+        })->count();
+
+        $orderActive = OrderItem::whereHas('product', function ($q) use ($artisanId){
+            $q->where('artisan_id', $artisanId);
+        })->whereNot('item_status', ['cancelled', 'completed', 'finish'])->count();
+
+        $balanceEstimated = Wallet::where('owner_id', Auth::id())->first();
+
+        return new ApiResponseDefault(
+            false,
+            "Berhasil menampilkan total transaksi!",
+            [
+                'all' => $orderAll,
+                'active' => $orderActive,
+                'balance' => $balanceEstimated->balance,
+            ]
+            );
     }
 
     public function adminDashboardStats()

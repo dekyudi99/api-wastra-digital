@@ -24,6 +24,12 @@ class Order extends Model
         'processed_at',
     ];
 
+    protected $appends = ['total_item'];
+
+    public function getTotalItemAttribute() {
+        return $this->items()->count();
+    }
+
     public function refund() {
         return $this->hasOne(Refund::class, 'order_id', 'id');
     }

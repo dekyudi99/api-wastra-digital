@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/change-password', function () {
+    return view('auth.change-password');
+})->name('password.change.form');
+
+Route::post('/change-password', [AuthController::class, 'changePassword'])->name('password.change');

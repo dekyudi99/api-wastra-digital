@@ -95,11 +95,11 @@ class ProcessSettledOrder implements ShouldQueue
                 $sellerWallet->increment('balance', $sellerAmount);
                 $adminWallet->increment('balance', $adminAmount);
 
-                // ===== UPDATE ITEM =====
-                $item->update([
-                    'item_status'  => 'processing',
-                    'is_processed' => true,
-                ]);
+                // // ===== UPDATE ITEM =====
+                // $item->update([
+                //     'item_status'  => 'processing',
+                //     'is_processed' => true,
+                // ]);
 
                 // ===== AUDIT =====
                 AuditLogger::log(
@@ -114,10 +114,10 @@ class ProcessSettledOrder implements ShouldQueue
                 );
             }
 
-            // TANDAI ORDER SUDAH DIPROSES
-            $order->update([
-                'processed_at' => now(),
-            ]);
+            // // TANDAI ORDER SUDAH DIPROSES
+            // $order->update([
+            //     'processed_at' => now(),
+            // ]);
         });
     }
 

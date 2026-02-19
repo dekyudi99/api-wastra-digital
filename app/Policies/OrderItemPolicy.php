@@ -45,6 +45,7 @@ class OrderItemPolicy
         return in_array($item->item_status, [
             'pending',
             'processing',
+            'shipped',
         ]);
     }
 }

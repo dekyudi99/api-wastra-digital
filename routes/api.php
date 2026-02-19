@@ -19,6 +19,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\CancelController;
 use App\Http\Controllers\WithdrawController;
+use App\Http\Controllers\TenunGuideController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,11 @@ Route::prefix('ai')->group(function () {
     Route::get('/buyer',  [AiInsightController::class, 'buyerInsight']);
     Route::get('/seller', [AiInsightController::class, 'sellerInsight']);
 });
+
+Route::middleware('auth:sanctum')->get(
+    '/ai/seller/tenun-guides',
+    [TenunGuideController::class, 'index']
+);
 
 Route::middleware('auth:sanctum')->get(
     '/ai/seller/stock-discount',
@@ -65,7 +71,7 @@ Route::patch('/admin/ai-insight/{id}/score', function (
     $log = AiInsightLog::findOrFail($id);
 
     $log->update([
-        'manual_score' => $request->score, // 1–5
+        'manual_score' => $request->score,
         'manual_note'  => $request->note,
     ]);
 
@@ -90,6 +96,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/profile/update', [UserController::class, 'update']);
     Route::put('/user/change-password', [UserController::class, 'changePassword']);
 
+    Route::get('/order/detail/{id}', [OrderController::class, 'detailOrder']);
+
     Route::middleware('role:customer')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
         Route::get('/cart/get', [OrderController::class, 'myCart']);
@@ -103,38 +111,42 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/payment/{id}', [PaymentController::class, 'pay']);
 
-        Route::post('/review/store/{id}', [ReviewController::class, 'store']);
-        Route::post('/review/update/{id}', [ReviewController::class, 'update']);
-
+        Route::post('/reviews/{orderItem}', [ReviewController::class,'store']);
+        Route::put('/reviews/{review}', [ReviewController::class,'update']);
+        
         Route::get('/address', [ShippingAddressController::class, 'index']);
         Route::post('/address/store', [ShippingAddressController::class, 'store']);
         Route::put('/address/update/{id}', [ShippingAddressController::class, 'update']);
         Route::delete('/address/delete/{id}', [ShippingAddressController::class, 'delete']);
         Route::get('/address/{id}', [ShippingAddressController::class, 'show']);
-
+        
         Route::post('/order-items/{id}/confirm', [OrderItemController::class, 'confirmReceived']);
+        Route::post('/cancel/order/{id}', [CancelController::class, 'cancelOrder']);
         Route::post('/cancel/{orderItemId}', [CancelController::class, 'request']);
     });
-
+        
     Route::middleware('role:artisan')->group(function () {
         Route::get('/product/my', [ProductController::class, 'myProduct']);
         Route::post('/product/store', [ProductController::class, 'store']);
         Route::post('/update/product/{id}', [ProductController::class, 'update']);
         Route::delete('/product/delete/{id}', [ProductController::class, 'delete']);
-
+        
         Route::get('/order/in', [OrderController::class, 'orderIn']);
-
-        Route::post('/order-items/{id}/status', [OrderItemController::class, 'updateStatus']);
+        Route::get('/order/in/newer', [OrderController::class, 'orderInNewer']);
+        Route::get('/order/total', [OrderController::class, 'totalTransaction']);
+        
+        Route::put('/order-items/{id}/status', [OrderItemController::class, 'updateStatus']);
 
         Route::post('/cancel/{id}/seller-approve', [CancelController::class, 'sellerApprove']);
-
+        
         Route::post('/withdraw/request', [WithdrawController::class, 'requestWithdraw']);
+        Route::get('/wallet/info', [WithdrawController::class, 'balance']);
     });
         
     Route::middleware('role:admin')->group(function () {
         Route::get('/order', [OrderController::class, 'order']);
         Route::get('/admin/dashboard-stats', [OrderController::class, 'adminDashboardStats']);
-
+        
         Route::get('/admin/totalisArtisan', [AdminController::class, 'totalPendaftaran']);
         Route::get('/admin/artisan/list', [AdminController::class, 'listPendaftaran']);
         Route::put('/admin/confirm/{id}', [AdminController::class, 'confirm']);
@@ -159,4 +171,6 @@ Route::get('/product/songket', [ProductController::class, 'songket']);
 Route::get('/product/endek', [ProductController::class, 'endek']);
 Route::get('/product/{id}', [ProductController::class, 'show']);
 
-Route::get('/review/product/{id}', [ReviewController::class, 'reviewProduct']);
+Route::get('/products/{product}/reviews', [ReviewController::class,'reviewProduct']);
+Route::get('/artisan/review/{id}', [ReviewController::class, 'showTotalReviews']);
+Route::post('/auth/forget-password', [AuthController::class, 'forgetPassword']);

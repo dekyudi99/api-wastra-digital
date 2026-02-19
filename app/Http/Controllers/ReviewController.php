@@ -2,107 +2,85 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Models\OrderItem;
 use App\Models\Review;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use App\Http\Resources\ApiResponseDefault;
+use App\Models\User;
 
 class ReviewController extends Controller
 {
-    public function store(Request $request, $id)
+    public function store(Request $request, OrderItem $orderItem)
     {
-        $messages = [
-            'rating.required' => 'Rating Wajib Diisi!',
-            'rating.numeric' => 'Rating Wajib Berupa Angka!',
-            'rating.min' => 'Rating Minimal 1!',
-            'rating.max' => 'Rating Maksimal 5!',
-        ];
+        $request->validate([
+            'rating'=>'required|integer|min:1|max:5',
+            'comment'=>'nullable|string'
+        ]);
 
-        $validator = Validator::make($request->all(), [
-            'rating' => 'required|numeric|min:1|max:5',
-            'comment' => 'nullable|string',
-        ], $messages);
-
-        if ($validator->fails()) {
-            return new ApiResponseDefault(false, $validator->errors(), null, 422);
+        // AUTH buyer
+        if ($orderItem->order->user_id !== auth()->id()) {
+            abort(403);
         }
 
-        $userId = Auth::id();
-        $user = User::whereId($userId)->first();
-        $productId = $id;
-
-        $hasPurchased = $user->order()
-            ->where('status', 'paid')
-            ->whereHas('item', function ($query) use ($productId) {
-                $query->where('product_id', $productId);
-            })
-            ->exists(); 
-
-        if (!$hasPurchased) {
-            return new ApiResponseDefault(false, 'Anda Hanya Bisa Mereview Produk yang Sudah Anda Beli!', null, 403);
+        // must completed
+        if ($orderItem->item_status !== 'completed') {
+            return new ApiResponseDefault(false,'Pesanan belum selesai',422);
         }
-        
-        $alreadyReviewed = Review::where('user_id', $user->id)
-                                ->where('product_id', $productId)
-                                ->exists();
 
-        if ($alreadyReviewed) {
-            return new ApiResponseDefault(false, 'Anda Sudah Pernah Mereview Produk Ini!', null, 409);
+        // only once
+        if (Review::where('order_item_id',$orderItem->id)->exists()) {
+            return new ApiResponseDefault(false,'Item sudah direview',409);
         }
 
         $review = Review::create([
-            'user_id' => $user->id,
-            'product_id' => $productId,
-            'rating' => $request->rating,
-            'comment' => $request->comment,
+            'user_id'=>auth()->id(),
+            'order_item_id'=>$orderItem->id,
+            'product_id'=>$orderItem->product_id,
+            'artisan_id'=>$orderItem->product->user_id,
+            'rating'=>$request->rating,
+            'comment'=>$request->comment
         ]);
 
-        return new ApiResponseDefault(true, 'Berhasil Membuat Review!', $review, 201);
+        return new ApiResponseDefault(true,'Review tersimpan',$review,201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Review $review)
     {
-        $messages = [
-            'rating.required' => 'Rating Wajib Diisi!',
-            'rating.numeric' => 'Rating Wajib Berupa Angka!',
-            'rating.min' => 'Rating Minimal 1!',
-            'rating.max' => 'Rating Maksimal 5!',
-        ];
+        if ($review->user_id !== auth()->id()) abort(403);
 
-        $validator = Validator::make($request->all(), [
-            'rating' => 'required|numeric|min:1|max:5',
-            'comment' => 'nullable|string',
-        ], $messages);
-
-        if ($validator->fails()) {
-            return new ApiResponseDefault(false, $validator->errors(), null, 422);
-        }
-
-        $userId = Auth::id();
-        $review = Review::whereId($id)->first();
-
-        if ($userId != $review->user_id) {
-             return new ApiResponseDefault(false, 'Anda Tidak Bisa Mengedit Review Orang Lain!', null, 409);
-        }
-
-        $review->update([
-            'rating' => $request->rating,
-            'comment' => $request->comment,
+        $request->validate([
+            'rating'=>'required|integer|min:1|max:5',
+            'comment'=>'nullable'
         ]);
 
-        return new ApiResponseDefault(true, 'Berhasil mengedit Review', $review);
+        $review->update($request->only('rating','comment'));
+
+        return new ApiResponseDefault(true,'Review diperbarui',$review);
     }
 
-    public function reviewProduct($id)
+    public function reviewProduct($productId)
     {
-        $review = Review::where('product_id', $id)->latest()->paginate(3);
+        $reviews = Review::with('user')
+            ->where('product_id',$productId)
+            ->latest()
+            ->paginate(5);
 
-        if ($review->isEmpty()) {
-            return new ApiResponseDefault(true, 'Belum ada review!');
+        return new ApiResponseDefault(true,'Review produk',$reviews);
+    }
+
+    public function showTotalReviews($sellerId)
+    {
+        $seller = User::with('product.review')->find($sellerId);
+
+        if (!$seller || $seller->role != 'artisan') {
+            return new ApiResponseDefault(false, "Ini bukan pengrajin atau Pengguna ini tidak ada!", null, 403);
         }
 
-        return new ApiResponseDefault(true, 'Berhasil menampilkan review product!', $review);
+        // Menghitung total dengan mapping collection
+        $totalReviews = $seller->product->sum(function ($product) {
+            return $product->review->count();
+        });
+
+        return new ApiResponseDefault(true, "Berhasil mengambil rating pengrajin!", ['rating' => $totalReviews]);
     }
 }

@@ -12,11 +12,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->call(function () {
-            \App\Models\Order::where('status', 'UNPAID')
-                ->where('created_at', '<', now()->subMinutes(15))
-                ->update(['status' => 'CANCELLED']);
-        })->everyMinute();
+        $schedule->command('orders:cancel-expired')->everyMinute();
     }
 
     /**

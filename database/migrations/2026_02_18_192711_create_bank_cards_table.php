@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wallets', function (Blueprint $table) {
+        Schema::create('bank_cards', function (Blueprint $table) {
             $table->id();
-            $table->enum('owner_type', ['admin', 'artisan']);
-            $table->foreignId('owner_id')->constrained('users')->cascadeOnUpdate();
-            $table->bigInteger('balance')->default(0);
-            $table->bigInteger('available_balance')->default(0);
             $table->timestamps();
         });
     }
@@ -26,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wallets');
+        Schema::dropIfExists('bank_cards');
     }
 };

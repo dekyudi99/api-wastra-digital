@@ -9,26 +9,74 @@ use App\Models\CancelRequest;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use App\Models\CancelApproval;
+use App\Models\Order;
 use App\Services\RefundService;
 use App\Services\MidtransRefundService;
+use Illuminate\Support\Facades\Auth;
 
 class CancelController extends Controller
 {
+    public function cancelOrder(Request $request, $id)
+    {
+        $order = Order::with('items')->find($id);
+
+        if (!$order) {
+            return new ApiResponseDefault(false, "Pesanan tidak ditemukan!", null, 404);
+        } 
+
+        if ($order->customer_id !== Auth::id()) {
+            return new ApiResponseDefault(false, "Anda tidak berhak membatalkan produk yang bukan milik anda!", null, 403);
+        }
+
+        if ($order->payment_status !== 'unpaid') {
+            return new ApiResponseDefault(false, "Anda tidak bisa membatalkan pesanan ini!", null, 403);
+        }
+
+        $request->validate([
+            'reason' => "required|string",
+        ]);
+
+        $order->update([
+            'order_status' => 'cancelled', 
+        ]);
+
+        foreach ($order->items as $item) {
+            $orderItem = OrderItem::find($item->id);
+
+            CancelRequest::create([
+                'order_item_id' => $orderItem->id,
+                'buyer_id' => auth()->id(),
+                'reason' => $request->reason,
+                'status' => 'completed',
+            ]);
+
+            $orderItem->update([
+                'item_status' => 'cancelled'
+            ]);
+        }
+
+        return new ApiResponseDefault(true, "Pesanan telah dibatalkan!");
+    }
+
     public function request(Request $request, $orderItemId)
     {
-        $item = OrderItem::findOrFail($orderItemId);
+        $item = OrderItem::with('order')->findOrFail($orderItemId);
 
         $this->authorize('create', [CancelRequest::class, $item]);
 
         $request->validate([
-            'reason' => 'required|string|min:10',
+            'reason' => 'required|string',
         ]);
-
+            
         $cancel = CancelRequest::create([
             'order_item_id' => $item->id,
-            'customer_id' => auth()->id(),
+            'buyer_id' => auth()->id(),
             'reason' => $request->reason,
             'status' => 'requested',
+        ]);
+                
+        $item->update([
+            'item_status' => 'cancelled'
         ]);
 
         AuditLogger::log(auth()->user(), 'request_cancel', $cancel);

@@ -10,7 +10,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Services\OtpService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use App\Mail\ChangePasswordMail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -160,7 +162,7 @@ class AuthController extends Controller
 
         DB::table('password_reset_tokens')->where('email', $reset->email)->delete();
 
-        return new ApiResponseDefault(true, 'Password berhasil diperbarui.');
+        return redirect()->away(env("URL_WEB"));
     }
 
     public function verifyEmail(Request $request) {
@@ -192,35 +194,35 @@ class AuthController extends Controller
         return new ApiResponseDefault(true, 'Verifikasi Email Berhasil', Null);
     }
 
-    // public function forgetPassword(Request $request)
-    // {
-    //     $messages = [
-    //         'email.required' => 'Email Wajib Diisi!',
-    //         'email.email' => 'Format Email Salah!',
-    //         'email.exists' => 'Email Tidak Terdaftar!',
-    //     ];
+    public function forgetPassword(Request $request)
+    {
+        $messages = [
+            'email.required' => 'Email Wajib Diisi!',
+            'email.email' => 'Format Email Salah!',
+            'email.exists' => 'Email Tidak Terdaftar!',
+        ];
 
-    //     $validator = Validator::make($request->all(), [
-    //         'email'=> 'required|email|exists:users,email',
-    //     ], $messages);
+        $validator = Validator::make($request->all(), [
+            'email'=> 'required|email|exists:users,email',
+        ], $messages);
 
-    //     if ($validator->fails()) {
-    //         return new ApiResponseDefault(false, $validator->errors(), null, 422);
-    //     }
+        if ($validator->fails()) {
+            return new ApiResponseDefault(false, $validator->errors()->first(), null, 422);
+        }
 
-    //     $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
-    //     $token = Str::random(60);
+        $token = Str::random(60);
 
-    //     DB::table('password_reset_tokens')->updateOrInsert(
-    //         ['email' => $user->email],
-    //         ['token' => $token],
-    //     );
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => $token],
+        );
 
-    //     Mail::to($user->email)->send(new ChangePasswordMail($user, $token));
+        Mail::to($user->email)->send(new ChangePasswordMail($user, $token));
 
-    //     return new ApiResponseDefault(true, 'Link Ganti Password Telah Dikirim ke Email');
-    // }
+        return new ApiResponseDefault(true, 'Link Ganti Password Telah Dikirim ke Email');
+    }
 
     public function sendToken()
     {

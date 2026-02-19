@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\ImagesProduct;
 use App\Models\Cart;
 use App\Models\OrderItem;
+use App\Models\Review;
 
 class Product extends Model
 {
@@ -28,13 +29,24 @@ class Product extends Model
         'artisan_id',
     ];
 
-    protected $appends = ['last_price', 'image_url'];
+    protected $appends = ['last_price', 'review_count', 'rating', 'image_url', ];
 
     protected $hidden = ['images_product'];
 
     public function getLastPriceAttribute()
     {
         return (float) $this->price-($this->price * $this->discount / 100);
+    }
+
+    public function getReviewCountAttribute() {
+        return $this->review()->count();
+    }
+
+    public function getRatingAttribute()
+    {
+        // Menggunakan avg() langsung ke database agar ringan
+        // Kita gunakan round() untuk membulatkan, misal 1 angka di belakang koma
+        return round($this->review()->avg('rating'), 1) ?? 0;
     }
 
     public function getImageUrlAttribute()
@@ -58,5 +70,9 @@ class Product extends Model
 
     public function order_item() {
         return $this->hasMany(OrderItem::class, 'product_id', 'id');
+    }
+
+    public function review() {
+        return $this->hasMany(Review::class, 'product_id', 'id');
     }
 }

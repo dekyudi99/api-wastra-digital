@@ -14,8 +14,8 @@ class CancelRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'order_id',
-        'customer_id',
+        'order_item_id',
+        'buyer_id',
         'reason',
         'status',
     ];
@@ -25,11 +25,11 @@ class CancelRequest extends Model
     }
 
     public function order_item() {
-        return $this->belongsTo(OrderItem::class, 'order_id', 'id');
+        return $this->belongsTo(OrderItem::class, 'order_item_id', 'id');
     }
 
     public function user() {
-        return $this->belongsTo(User::class, 'customer_id', 'id');
+        return $this->belongsTo(User::class, 'buyer_id', 'id');
     }
 
     public function cancel_approval() {

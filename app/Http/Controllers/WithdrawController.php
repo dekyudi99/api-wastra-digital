@@ -12,6 +12,17 @@ use Illuminate\Support\Facades\DB;
 
 class WithdrawController extends Controller
 {
+    public function balance()
+    {
+        $wallet = Wallet::where('owner_id', Auth::id())->first();
+
+        if (!$wallet) {
+            return new ApiResponseDefault(false, 'Wallet tidak ditemukan!', null, 404);
+        }
+
+        return new ApiResponseDefault(true, "Berhasil mengambil wallet!", $wallet);
+    }
+
     public function requestWithdraw(Request $request)
     {
         $request->validate([

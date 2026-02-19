@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('name_at_purchase');
             $table->text('description_at_purchase');
             $table->integer('price_at_purchase');
-            $table->enum('item_status', ['pending', 'processing', 'shipped', 'completed', 'cancelled'])->default('pending');
+            $table->enum('item_status', ['pending', 'processing', 'shipped', 'completed', 'finish', 'cancelled'])->default('pending');
             $table->boolean('is_processed')->default(0);
             $table->timestamp('shipped_at')->nullable();
             $table->timestamp('completed_at')->nullable();

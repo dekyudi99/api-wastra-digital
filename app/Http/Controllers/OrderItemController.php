@@ -16,7 +16,7 @@ class OrderItemController extends Controller
         $this->authorize('updateStatus', $item);
 
         $request->validate([
-            'status' => 'required|in:processing,shipped',
+            'status' => 'required|in:processing,shipped,completed',
         ]);
 
         $old = $item->only('item_status');

@@ -13,9 +13,11 @@ class Review extends Model
 
     protected $fillable = [
         'user_id',
+        'product_id',
         'order_item_id',
-        'comment',
+        'artisan_id',
         'rating',
+        'comment'
     ];
 
     protected $appends = ['reviewer'];
@@ -26,11 +28,18 @@ class Review extends Model
         return $this->user;
     }
 
-    public function user() {
-        return $this->belongsTo(User::class, 'user_id', 'id');
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
-    public function order_item() {
-        return $this->belongsTo(OrderItem::class, 'order_item_id', 'id');
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function orderItem()
+    {
+        return $this->belongsTo(OrderItem::class);
     }
 }
