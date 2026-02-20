@@ -43,6 +43,11 @@ Route::middleware('auth:sanctum')->get(
 );
 
 Route::middleware('auth:sanctum')->get(
+    '/ai/seller/tenun-guides/{id}',
+    [TenunGuideController::class, 'show']
+);
+
+Route::middleware('auth:sanctum')->get(
     '/ai/seller/stock-discount',
     [AiInsightController::class, 'stockAndDiscountInsight']
 );

@@ -8,15 +8,13 @@ use App\Http\Resources\ApiResponseDefault;
 
 class TenunGuideController extends Controller
 {
+    // List Riwayat: Hanya ambil data dasar (Tanpa ai_result)
     public function index(Request $request)
     {
-        $userId = auth()->id();
-
-        $guides = TenunGuide::where('user_id', $userId)
+        $guides = TenunGuide::where('user_id', auth()->id())
             ->latest()
             ->paginate(10);
 
-        // rapikan response supaya frontend gampang pakai
         $data = $guides->through(function ($g) {
             return [
                 'id' => $g->id,
@@ -24,28 +22,35 @@ class TenunGuideController extends Controller
                 'motif_width_lungsin' => $g->motif_width_lungsin,
                 'motif_height_pakan' => $g->motif_height_pakan,
                 'motif_colors' => $g->motif_colors,
-                'reference_image_url' => $g->reference_image_path
-                    ? asset('storage/' . $g->reference_image_path)
-                    : null,
-                'ai_result' => $g->ai_result,
-                'created_at' => $g->created_at->toDateTimeString(),
+                'created_at' => $g->created_at->diffForHumans(), // Lebih user-friendly
             ];
         });
 
-        return new ApiResponseDefault(
-            true,
-            'Riwayat panduan tenun berhasil diambil',
-            [
-                'items' => $data->items(),
-                'pagination' => [
-                    'current_page' => $guides->currentPage(),
-                    'last_page' => $guides->lastPage(),
-                    'per_page' => $guides->perPage(),
-                    'total' => $guides->total(),
-                ],
+        return new ApiResponseDefault(true, 'Daftar riwayat diambil', [
+            'items' => $data->items(),
+            'pagination' => [
+                'current_page' => $guides->currentPage(),
+                'total' => $guides->total(),
             ],
-            200
-        );
+        ]);
+    }
+
+    // Detail Riwayat: Ambil data lengkap + AI Result
+    public function show($id)
+    {
+        $guide = TenunGuide::where('user_id', auth()->id())->findOrFail($id);
+
+        // Pastikan URL gambar menggunakan asset() agar bisa diakses React
+        $aiResult = $guide->ai_result;
+        if (isset($aiResult['image'])) {
+            $aiResult['image'] = asset($aiResult['image']);
+        }
+
+        return new ApiResponseDefault(true, 'Detail panduan berhasil diambil', [
+            'id' => $guide->id,
+            'design_name' => $guide->design_name,
+            'ai_result' => $aiResult, // Data berat dimuat di sini
+            'reference_image_url' => $guide->reference_image_path ? asset('storage/' . $guide->reference_image_path) : null,
+        ]);
     }
 }
- 

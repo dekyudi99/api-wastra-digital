@@ -461,23 +461,23 @@ class OrderController extends Controller
         // 1. Stats Utama
         $artisanCount = User::where('role', 'artisan')->count();
         $productCount = Product::count();
-        $ongoingOrders = Order::whereIn('status', ['paid', 'processing', 'shipped'])->count();
+        $ongoingOrders = Order::whereIn('order_status', ['paid', 'processing', 'shipped'])->count();
         
         // Komisi (10% dari total nominal pesanan yang berstatus 'delivered')
-        $totalDeliveredRevenue = Order::where('status', 'delivered')->sum('total_amount');
+        $totalDeliveredRevenue = Order::where('order_status', 'delivered')->sum('total_amount');
         $bumdesCommission = $totalDeliveredRevenue * 0.1;
 
         // 2. Data Grafik Batang (6 Bulan Terakhir)
         $monthlyRevenue = Order::selectRaw('MONTHNAME(created_at) as month, SUM(total_amount) as total')
             ->where('created_at', '>=', now()->subMonths(6))
-            ->whereIn('status', ['paid', 'processing', 'shipped', 'delivered'])
+            ->whereIn('order_status', ['paid', 'processing', 'shipped', 'delivered'])
             ->groupBy('month')
             ->get();
 
         // 3. Data Top Pengrajin (Berdasarkan total item yang terjual)
         $topArtisans = User::where('role', 'artisan')
-            ->withCount(['products as items_sold' => function($query) {
-                $query->join('order_items', 'products.id', '=', 'order_items.product_id')
+            ->withCount(['product as items_sold' => function($query) {
+                $query->join('order_items', 'product.id', '=', 'order_item.product_id')
                     ->select(DB::raw("sum(quantity)"));
             }])
             ->orderBy('items_sold', 'desc')

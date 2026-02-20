@@ -18,7 +18,7 @@ class AdminController extends Controller
 
     public function listPendaftaran()
     {
-        $user = User::where('isArtisan', 0)->latest()->paginate(5);
+        $user = User::where('status', 'pending')->latest()->paginate(5);
 
         if ($user->isEmpty()) {
             return new ApiResponseDefault(true, "Belum ada pendaftaran!");
@@ -36,7 +36,7 @@ class AdminController extends Controller
         }
 
         $user->update([
-            'isArtisan' => 1,
+            'status' => 'approved',
         ]);
 
         return new ApiResponseDefault(true, "Berhasil mengkonfirmasi pengrajin!", $user);
