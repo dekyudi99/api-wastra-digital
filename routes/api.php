@@ -157,8 +157,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/confirm/{id}', [AdminController::class, 'confirm']);
         Route::get('/admin/total/artisan/active', [AdminController::class, 'totalActiveArtisan']);
         Route::get('/admin/listActiveArtisan', [AdminController::class, 'listActiveArtisan']);
+        Route::get('/admin/commision', [AdminController::class, 'commision']);
         Route::put('/admin/deactive/{id}', [AdminController::class, 'confirm']);
         Route::post('/cancel/{id}/admin-approve', [CancelController::class, 'adminApprove']);
+        Route::get('/admin/order/on-progress', [AdminController::class, 'orderOnProgress']);
 
         Route::post('/withdraw/approve/{id}', [WithdrawController::class, 'approve']);
         Route::post('/withdraw/markpaid/{id}', [WithdrawController::class, 'markPaid']);

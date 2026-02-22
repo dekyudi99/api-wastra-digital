@@ -6,19 +6,27 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Http\Resources\ApiResponseDefault;
 use Illuminate\Support\Facades\Validator;
+use App\Models\Wallet;
+use App\Models\OrderItem;
 
 class AdminController extends Controller
 {
+    public function commision() {
+        $wallet = Wallet::where('owner_type', 'admin')->first();
+
+        return new ApiResponseDefault(true, 'Berhasil menampilkan saldo!', ['saldo' => $wallet->balance]);
+    }
+
     public function totalPendaftaran()
     {
-        $user = User::where('isArtisan', 0)->count();
+        $user = User::where('email_verified', 1)->where('status', 'pending')->count();
 
         return new ApiResponseDefault(true, "Berhasil menampilkan jumlah pendaftaran pengrajin", ['total' => $user]);
     }
 
     public function listPendaftaran()
     {
-        $user = User::where('status', 'pending')->latest()->paginate(5);
+        $user = User::where('email_verified', 1)->where('status', 'pending')->latest()->paginate(5);
 
         if ($user->isEmpty()) {
             return new ApiResponseDefault(true, "Belum ada pendaftaran!");
@@ -44,14 +52,14 @@ class AdminController extends Controller
 
     public function totalActiveArtisan()
     {
-        $user = User::where('isArtisan', 1)->count();
+        $user = User::where('email_verified', 1)->where('role', 'artisan')->where('status', 'approved')->count();
 
         return new ApiResponseDefault(true, "Berhasil menampilkan jumlah pengrajin active", ['total' => $user]);
     }
 
     public function listActiveArtisan()
     {
-        $user = User::where('isArtisan', 1)->get();
+        $user = User::where('email_verified', 1)->where('status', 'approved')->get();
 
         if ($user->isEmpty()) {
             return new ApiResponseDefault(true, "Belum ada pendaftaran!");
@@ -69,9 +77,16 @@ class AdminController extends Controller
         }
 
         $user->update([
-            'isArtisan' => 0,
+            'status' => 'rejected',
         ]);
 
         return new ApiResponseDefault(true, "Berhasil mengkonfirmasi pengrajin!", $user);
+    }
+
+    public function orderOnProgress()
+    {
+        $order = OrderItem::whereNot('item_status', ['cancelled', 'finish'])->count();
+
+        return new ApiResponseDefault(true, "Berhasil mengampilkan pesanan aktif!", ['total' => $order]);
     }
 }

@@ -70,7 +70,7 @@ class User extends Authenticatable
     {
         if ($this->ktp)
         {
-            return (env('APP_URL').'/ktp/'.$this->ktp);
+            return (env('APP_URL').'/storage/'.$this->ktp);
         }
         return null;
     }
