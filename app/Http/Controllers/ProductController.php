@@ -241,7 +241,7 @@ class ProductController extends Controller
     public function delete($id)
     {
         if (Auth::user()->role != 'admin') {
-            $product = Product::where('id', $id)->where('user_id', Auth::id())->first();
+            $product = Product::where('id', $id)->where('artisan_id', Auth::id())->first();
     
             if (!$product) {
                 return new ApiResponseDefault(false, 'Produk Tidak Ditemukan atau Anda Tidak Bisa Menghapus Produk Ini!', null, 404);
