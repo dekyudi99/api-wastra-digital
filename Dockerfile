@@ -25,7 +25,5 @@ RUN composer install --no-dev --optimize-autoloader
 RUN chmod -R 777 storage bootstrap/cache
 
 CMD sleep 10 && \
-    php artisan migrate --force && \
-    php artisan storage:link && \
     php artisan queue:work --daemon & \
     php artisan serve --host=0.0.0.0 --port=8000 
