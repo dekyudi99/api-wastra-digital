@@ -125,7 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/address/delete/{id}', [ShippingAddressController::class, 'delete']);
         Route::get('/address/{id}', [ShippingAddressController::class, 'show']);
         
-        Route::post('/order-items/{id}/confirm', [OrderItemController::class, 'confirmReceived']);
+        Route::put('/order-items/{id}/confirm', [OrderItemController::class, 'confirmReceived']);
         Route::post('/cancel/order/{id}', [CancelController::class, 'cancelOrder']);
         Route::post('/cancel/{orderItemId}', [CancelController::class, 'request']);
     });

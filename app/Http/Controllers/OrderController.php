@@ -451,7 +451,7 @@ class OrderController extends Controller
             [
                 'all' => $orderAll,
                 'active' => $orderActive,
-                'balance' => $balanceEstimated->balance,
+                'balance' => $balanceEstimated->balance + $balanceEstimated->available_balance,
             ]
             );
     }

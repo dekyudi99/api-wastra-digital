@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Services\AuditLogger;
 use App\Models\OrderItem;
 use App\Http\Resources\ApiResponseDefault;
+use App\Models\Wallet;
+use App\Models\Product;
 
 class OrderItemController extends Controller
 {
@@ -23,7 +25,9 @@ class OrderItemController extends Controller
 
         $item->update([
             'item_status' => $request->status,
+            'processing_at' => $request->status === 'processing' ? now() : null,
             'shipped_at' => $request->status === 'shipped' ? now() : null,
+            'completed_at' => $request->status === 'completed' ? now() : null,
         ]);
 
         AuditLogger::log(
@@ -46,8 +50,21 @@ class OrderItemController extends Controller
         $old = $item->only('item_status');
 
         $item->update([
-            'item_status' => 'completed',
-            'completed_at' => now(),
+            'item_status' => 'finish',
+            'finished_at' => now(),
+        ]);
+
+        $wallet = Wallet::where('owner_id', $item->artisan_id)->first();
+
+        $wallet->update([
+            'balance' => $wallet->balance - ($item->subtotal - (($item->subtotal*10)/100)),
+            'available_balance' => $wallet->available_balance + ($item->subtotal - (($item->subtotal*10)/100)),
+        ]);
+
+        $product = Product::find($item->product_id);
+
+        $product->update([
+            'sales' => $product->sales + $item->quantity,
         ]);
 
         $item->order->refreshStatus();
@@ -57,7 +74,7 @@ class OrderItemController extends Controller
             'confirm_received',
             $item,
             $old,
-            ['item_status' => 'completed']
+            ['item_status' => 'finish']
         );
 
         return new ApiResponseDefault(true, 'Pesanan dikonfirmasi');

@@ -76,7 +76,8 @@ class CancelController extends Controller
         ]);
                 
         $item->update([
-            'item_status' => 'cancelled'
+            'item_status' => 'cancelled',
+            'cancelled_at' => now()
         ]);
 
         AuditLogger::log(auth()->user(), 'request_cancel', $cancel);

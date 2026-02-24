@@ -15,7 +15,7 @@ class ProductController extends Controller
     public function index (Request $request)
     {
         // Mengambil Semua Product
-        $query = Product::orderBy('created_at', 'desc');
+        $query = Product::where('deleted_at', null)->orderBy('created_at', 'desc');
 
         // Cek Apakah Ada Parameter search dari Request
         if ($request->has('search')) {
@@ -60,7 +60,7 @@ class ProductController extends Controller
 
     public function myProduct()
     {
-        $product = Product::where('artisan_id', Auth::id())->get();
+        $product = Product::where('deleted_at', null)->where('artisan_id', Auth::id())->get();
 
         if ($product->isEmpty()) {
             return new ApiResponseDefault(false, "Anda belum punya produk!");
@@ -145,7 +145,7 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with('user')->where('id', $id)->get();
+        $product = Product::where('deleted_at', null)->with('user')->where('id', $id)->get();
 
         if ($product->isEmpty()) {
             return new ApiResponseDefault(false, 'Produk Tidak Ditemukan!', null, 404);
@@ -156,7 +156,7 @@ class ProductController extends Controller
 
     public function update(Request $request, $id)
     {
-        $product = Product::where('id', $id)->where('artisan_id', Auth::id())->first();
+        $product = Product::where('deleted_at', null)->where('id', $id)->where('artisan_id', Auth::id())->first();
 
         if (!$product) {
             return new ApiResponseDefault(false, 'Produk Tidak Ditemukan atau Anda Tidak Bisa Mengedit Produk Ini!', null, 404);
@@ -241,13 +241,13 @@ class ProductController extends Controller
     public function delete($id)
     {
         if (Auth::user()->role != 'admin') {
-            $product = Product::where('id', $id)->where('artisan_id', Auth::id())->first();
+            $product = Product::where('deleted_at', null)->where('id', $id)->where('artisan_id', Auth::id())->first();
     
             if (!$product) {
                 return new ApiResponseDefault(false, 'Produk Tidak Ditemukan atau Anda Tidak Bisa Menghapus Produk Ini!', null, 404);
             }
         } else {
-            $product = Product::find($id);
+            $product = Product::where('deleted_at', null)->find($id);
     
             if (!$product) {
                 return new ApiResponseDefault(false, 'Produk Tidak Ditemukan!', null, 404);
@@ -258,23 +258,26 @@ class ProductController extends Controller
 
         foreach ($images as $image) {
             Storage::disk('public')->delete($image->image);
+            $image->delete();
         }
 
-        $product->delete();
+        $product->update([
+            'deleted_at' => now(),
+        ]);
 
         return new ApiResponseDefault(true, 'Produk Berhasil Dihapus!', Null, 200);
     }
 
     public function endek()
     {
-        $endek = Product::where('category', 'Endek')->count();
+        $endek = Product::where('deleted_at', null)->where('category', 'Endek')->count();
 
         return new ApiResponseDefault(true, 'Berhasil menampilkan jumlah kain songket!', ['total'=>$endek]);
     }
 
     public function songket()
     {
-        $songket = Product::where('category', 'Songket')->count();
+        $songket = Product::where('deleted_at', null)->where('category', 'Songket')->count();
 
         return new ApiResponseDefault(true, 'Berhasil menampilkan jumlah!', ['total'=>$songket]);
     }

@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Review;
+use App\Models\CancelRequest;
 
 class OrderItem extends Model
 {
@@ -23,9 +24,11 @@ class OrderItem extends Model
         'quantity',
         'subtotal',
         'item_status',
+        'processing_at',
         'shipped_at',
         'completed_at',
-        'is_processed'
+        'finished_at',
+        'cancelled_at',
     ];
 
     public function order() {
@@ -42,5 +45,9 @@ class OrderItem extends Model
 
     public function review() {
         return $this->hasOne(Review::class, 'order_item_id', 'id');
+    }
+
+    public function cancel_request() {
+        return $this->hasOne(CancelRequest::class, 'cancel_request_id', 'id');
     }
 }

@@ -17,7 +17,8 @@ class Review extends Model
         'order_item_id',
         'artisan_id',
         'rating',
-        'comment'
+        'comment',
+        'deleted_at',
     ];
 
     protected $appends = ['reviewer'];

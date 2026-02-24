@@ -16,6 +16,7 @@ class Wallet extends Model
         'owner_type',
         'owner_id',
         'balance',
+        'available_balance',
     ];
 
     public function user() {

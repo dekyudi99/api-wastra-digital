@@ -26,6 +26,7 @@ return new class extends Migration
             $table->enum('status', ['Aktif', 'Nonaktif'])->default('Aktif');
             $table->foreignId('artisan_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
             $table->timestamps();
+            $table->timestamp('deleted_at')->nullable();
         });
     }
 

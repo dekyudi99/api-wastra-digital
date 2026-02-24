@@ -26,6 +26,7 @@ class Product extends Model
         'long',
         'discount',
         'status',
+        'deleted_at',
         'artisan_id',
     ];
 
