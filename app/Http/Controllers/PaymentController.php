@@ -7,16 +7,15 @@ use Midtrans\Snap;
 use App\Models\Order;
 use App\Models\TransactionHistory;
 use App\Http\Resources\ApiResponseDefault;
-use App\Models\Product;
 
 class PaymentController extends Controller
 {
     public function pay($id)
     {
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = (bool) env('MIDTRANS_IS_PRODUCTION');
-        Config::$isSanitized = true;
-        Config::$is3ds = true;
+        Config::$serverKey = config('midtrans.server_key');
+        Config::$isProduction = config('midtrans.is_production');
+        Config::$isSanitized = config('midtrans.is_sanitized');
+        Config::$is3ds = config('midtrans.is_3ds');
 
         $order= Order::find($id);
 
@@ -47,7 +46,7 @@ class PaymentController extends Controller
                 ],
             ];
     
-             try {
+            try {
                 $paymentUrl = Snap::createTransaction($params)->redirect_url;
     
                 return response()->json(['payment_url' => $paymentUrl]);
