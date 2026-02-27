@@ -29,6 +29,7 @@ class ChatController extends Controller {
     }
 
     public function ask(Request $request) {
+        ini_set('output_buffering', 'off');
         $request->validate(['message' => 'required', 'topic_id' => 'required']);
 
         // 1. Deteksi Niat User (Intent Detection)
