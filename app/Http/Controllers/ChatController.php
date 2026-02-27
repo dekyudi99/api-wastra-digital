@@ -80,6 +80,7 @@ class ChatController extends Controller {
             echo "data: [DONE]\n\n";
         }, 200, [
             'Content-Type' => 'text/event-stream',
+            'X-Accel-Buffering' => 'no',
             'Cache-Control' => 'no-cache',
             'Connection' => 'keep-alive',
         ]);

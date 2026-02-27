@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('action');
             $table->string('auditable_type');
             $table->bigInteger('auditable_id');
-            $table->json('old_values')->nullable()->change();
-            $table->json('new_values')->nullable()->change();
+            $table->json('old_values')->nullable();
+            $table->json('new_values')->nullable();
             $table->string('ip_address');
             $table->string('user_agent');
             $table->timestamps();
