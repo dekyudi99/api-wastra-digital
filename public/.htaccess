@@ -19,3 +19,11 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<IfModule mod_php.c>
+    php_value output_buffering Off
+    php_value zlib.output_compression Off
+</IfModule>
+
+Header set Content-Type "text/event-stream" env=is_sse
+Header set Cache-Control "no-cache"

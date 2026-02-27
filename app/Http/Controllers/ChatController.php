@@ -29,7 +29,11 @@ class ChatController extends Controller {
     }
 
     public function ask(Request $request) {
-        ini_set('output_buffering', 'off');
+        if (function_exists('ini_set')) {
+            ini_set('output_buffering', 'off');
+            ini_set('zlib.output_compression', false);
+        }
+        
         $request->validate(['message' => 'required', 'topic_id' => 'required']);
 
         // 1. Deteksi Niat User (Intent Detection)
