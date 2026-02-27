@@ -154,12 +154,14 @@ class OrderController extends Controller
             'cart_ids.*.exists' => 'Keranjang Tidak Ada!',
             'shipping_address.required' => 'Lokasi Tujuan Wajib Diisi!',
             'shipping_address.string' => 'Lokasi Tujuan Wajib Bertipe String!',
+            'payment_method.required' => 'Metode Pembayaran Wajib Diisi!',
         ];
 
         $validator = Validator::make($request->all(), [
             'cart_ids'       => 'required|array',
             'cart_ids.*'     => 'exists:carts,id',
             'shipping_address' => 'required|string',
+            'payment_method' => 'required',
         ], $messages);
 
         if ($validator->fails()) {
@@ -197,6 +199,7 @@ class OrderController extends Controller
                 'payment_status' => 'unpaid',
                 'total_amount' => $totalAmount,
                 'shipping_address' => $request->shipping_address,
+                'payment_method' => $request->payment_method,
             ]);
 
             foreach ($cartItems as $item) {
@@ -220,15 +223,19 @@ class OrderController extends Controller
             return $order;
         });
 
+        if ($request->payment_method == 'cod') {
+            return new ApiResponseDefault(true, 'Pesanan Berhasil Dibuat!', $order, 201);
+        } else {
             $paymentController = new PaymentController();
-
+    
             $paymentResponse = $paymentController->pay($order->id);
-
+    
             $paymentData = json_decode($paymentResponse->getContent(), true);
-
+    
             $paymentUrl = $paymentData['payment_url'] ?? null;
-
+    
             return new ApiResponseDefault(true, 'Pesanan Berhasil Dibuat!', [$order, $paymentUrl], 201);
+        }
         } catch (\Exception $e) {
             return new ApiResponseDefault(false, 'Gagal Membuat Pesanan: '.$e, null, 500);
         }
@@ -241,11 +248,13 @@ class OrderController extends Controller
             'quantity.min' => 'Kuantitas Minimal 1!',
             'shipping_address.required' => 'Lokasi Tujuan Wajib Diisi!',
             'shipping_address.string' => 'Lokasi Tujuan Wajib Bertipe String!',
+            'payment_method.required' => 'Metode pembayaran wajib diisi!',
         ];
 
         $validator = Validator::make($request->all(), [
             'quantity' => 'required|numeric|min:1',
             'shipping_address' => 'required|string',
+            'payment_method' => 'required'
         ], $messages);
 
         if ($validator->fails()) {
@@ -273,6 +282,7 @@ class OrderController extends Controller
                     'order_code' => 'INV-' . time(),
                     'total_amount' => $quantity * $product->last_price,
                     'shipping_address' => $request->input('shipping_address'),
+                    'payment_method' => $request->input('payment_method'),
                     'status' => 'unpaid',
                 ]);
 
@@ -292,15 +302,19 @@ class OrderController extends Controller
                 return $newOrder;
             });
 
-            $paymentController = new PaymentController();
-
-            $paymentResponse = $paymentController->pay($order->id);
-
-            $paymentData = json_decode($paymentResponse->getContent(), true);
-            
-            $paymentUrl = $paymentData['payment_url'] ?? null;
-
-            return new ApiResponseDefault(true, 'Pesanan Berhasil Dibuat!', [$order, $paymentUrl], 201);
+            if ($request->input('payment_method') == 'cod') {
+                return new ApiResponseDefault(true, 'Pesanan Berhasil Dibuat!', $order, 201);
+            } else {
+                $paymentController = new PaymentController();
+    
+                $paymentResponse = $paymentController->pay($order->id);
+    
+                $paymentData = json_decode($paymentResponse->getContent(), true);
+                
+                $paymentUrl = $paymentData['payment_url'] ?? null;
+    
+                return new ApiResponseDefault(true, 'Pesanan Berhasil Dibuat!', [$order, $paymentUrl], 201);
+            }
         } catch (\Exception $e) {
             return new ApiResponseDefault(false, 'Gagal Membuat Pesanan: '.$e, null, 500);
         }
@@ -422,7 +436,10 @@ class OrderController extends Controller
         $orderItem = OrderItem::whereHas('product', function ($q) use ($artisanId){
             $q->where('artisan_id', $artisanId);
         })->whereHas('order', function ($q) {
-            $q->where('payment_status', 'settled');
+            $q->whereNot(function ($query) {
+                $query->where('payment_status', 'unpaid')
+                    ->where('payment_method', 'midtrans');
+            });
         })->whereNot('item_status', ['cancelled', 'completed', 'finish'])->latest()->take(5)->get();
 
         if ($orderItem->isEmpty()) {

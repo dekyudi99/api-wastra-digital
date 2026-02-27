@@ -19,6 +19,7 @@ use App\Models\Wallet;
 use App\Models\Withdrawal;
 use App\Models\CancelRequest;
 use App\Models\AuditLog;
+use App\Models\Topic;
 
 class User extends Authenticatable
 {
@@ -84,6 +85,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function topic() {
+        return $this->hasMany(Topic::class, 'user_id', 'id');
+    }
 
     public function auditLog() {
         return $this->hasMany(AuditLog::class, 'actor_id', 'íd');

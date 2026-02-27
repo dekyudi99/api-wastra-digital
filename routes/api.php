@@ -10,7 +10,6 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShippingAddressController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
 use App\Models\AiInsightLog;
 use App\Http\Controllers\AiInsightController;
@@ -20,6 +19,7 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\CancelController;
 use App\Http\Controllers\WithdrawController;
 use App\Http\Controllers\TenunGuideController;
+USE App\Http\Controllers\ChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,56 +32,56 @@ use App\Http\Controllers\TenunGuideController;
 |
 */
 
-Route::prefix('ai')->group(function () {
-    Route::get('/buyer',  [AiInsightController::class, 'buyerInsight']);
-    Route::get('/seller', [AiInsightController::class, 'sellerInsight']);
-});
+// Route::prefix('ai')->group(function () {
+//     Route::get('/buyer',  [AiInsightController::class, 'buyerInsight']);
+//     Route::get('/seller', [AiInsightController::class, 'sellerInsight']);
+// });
 
-Route::middleware('auth:sanctum')->get(
-    '/ai/seller/tenun-guides',
-    [TenunGuideController::class, 'index']
-);
+// Route::middleware('auth:sanctum')->get(
+//     '/ai/seller/tenun-guides',
+//     [TenunGuideController::class, 'index']
+// );
 
-Route::middleware('auth:sanctum')->get(
-    '/ai/seller/tenun-guides/{id}',
-    [TenunGuideController::class, 'show']
-);
+// Route::middleware('auth:sanctum')->get(
+//     '/ai/seller/tenun-guides/{id}',
+//     [TenunGuideController::class, 'show']
+// );
 
-Route::middleware('auth:sanctum')->get(
-    '/ai/seller/stock-discount',
-    [AiInsightController::class, 'stockAndDiscountInsight']
-);
+// Route::middleware('auth:sanctum')->get(
+//     '/ai/seller/stock-discount',
+//     [AiInsightController::class, 'stockAndDiscountInsight']
+// );
 
-Route::middleware(['auth:sanctum'])->post(
-    '/ai/seller/tenun-guide',
-    [AiInsightController::class, 'tenunGuide']
-);
+// Route::middleware(['auth:sanctum'])->post(
+//     '/ai/seller/tenun-guide',
+//     [AiInsightController::class, 'tenunGuide']
+// );
 
-// Route::middleware('auth:sanctum')->get('/ai/seller/design-preview', [AiInsightController::class, 'designPreview']);
+// // Route::middleware('auth:sanctum')->get('/ai/seller/design-preview', [AiInsightController::class, 'designPreview']);
 
-Route::middleware('auth:sanctum')->post(
-    '/ai/recommendation/{id}/approve',
-    [AiRecommendationController::class, 'approve']
-);
+// Route::middleware('auth:sanctum')->post(
+//     '/ai/recommendation/{id}/approve',
+//     [AiRecommendationController::class, 'approve']
+// );
 
-Route::middleware('auth:sanctum')->get(
-    '/ai/seller/health-score',
-    [AiInsightController::class, 'productHealthScore']
-);
+// Route::middleware('auth:sanctum')->get(
+//     '/ai/seller/health-score',
+//     [AiInsightController::class, 'productHealthScore']
+// );
 
-Route::patch('/admin/ai-insight/{id}/score', function (
-    Request $request,
-    $id
-) {
-    $log = AiInsightLog::findOrFail($id);
+// Route::patch('/admin/ai-insight/{id}/score', function (
+//     Request $request,
+//     $id
+// ) {
+//     $log = AiInsightLog::findOrFail($id);
 
-    $log->update([
-        'manual_score' => $request->score,
-        'manual_note'  => $request->note,
-    ]);
+//     $log->update([
+//         'manual_score' => $request->score,
+//         'manual_note'  => $request->note,
+//     ]);
 
-    return response()->json(['success' => true]);
-});
+//     return response()->json(['success' => true]);
+// });
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations', [MessageController::class, 'index']);
@@ -102,6 +102,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/change-password', [UserController::class, 'changePassword']);
 
     Route::get('/order/detail/{id}', [OrderController::class, 'detailOrder']);
+
+    Route::prefix('ai')->group(function () {
+        Route::get('/topics', [ChatController::class, 'getTopics']);
+        Route::post('/topics', [ChatController::class, 'createTopic']);
+        Route::get('/topics/{topicId}/messages', [ChatController::class, 'getMessages']);
+        Route::post('/ask', [ChatController::class, 'ask']);
+    });
 
     Route::middleware('role:customer')->group(function () {
         Route::post('/cart/store/{id}', [OrderController::class, 'cart']);
@@ -158,12 +165,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/admin/total/artisan/active', [AdminController::class, 'totalActiveArtisan']);
         Route::get('/admin/listActiveArtisan', [AdminController::class, 'listActiveArtisan']);
         Route::get('/admin/commision', [AdminController::class, 'commision']);
-        Route::put('/admin/deactive/{id}', [AdminController::class, 'confirm']);
+        Route::put('/admin/deactive/{id}', [AdminController::class, 'deactiveArtisan']);
         Route::post('/cancel/{id}/admin-approve', [CancelController::class, 'adminApprove']);
         Route::get('/admin/order/on-progress', [AdminController::class, 'orderOnProgress']);
 
         Route::post('/withdraw/approve/{id}', [WithdrawController::class, 'approve']);
         Route::post('/withdraw/markpaid/{id}', [WithdrawController::class, 'markPaid']);
+
+        Route::get('/admin/new-order', [AdminController::class, 'orderItem']);
+        Route::get('/admin/logging', [AdminController::class, 'logging']);
+        Route::get('/admin/active/artisan/list', [AdminController::class, 'activeArtisanList']);
     });
 });
 

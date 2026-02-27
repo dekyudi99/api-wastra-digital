@@ -18,6 +18,7 @@ return new class extends Migration
             $table->enum('order_status', ['pending', 'confirmed', 'processing', 'shipped', 'completed', 'cancelled'])->default('pending');
             $table->enum('payment_status', ['unpaid', 'paid', 'settled', 'refunded'])->default('unpaid');
             $table->text('shipping_address');
+            $table->enum('payment_method', ['midtrans', 'cod']);
             $table->integer('total_amount');
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
