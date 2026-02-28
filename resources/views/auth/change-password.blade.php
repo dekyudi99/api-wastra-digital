@@ -45,7 +45,7 @@
         const messagePassword = document.getElementById('messagePassword');
         const submitBtn = document.getElementById('submitBtn');
 
-        function validatePassword() {
+        function validateLengthPassword() {
             if (password.value.length > 0) {
                 if (password.value.length < 8) {
                     messagePassword.style.display = 'block';
@@ -95,7 +95,7 @@
         }
 
         confirmPassword.addEventListener('input', validatePassword);
-        password.addEventListener('input', validatePassword);
+        password.addEventListener('input', validateLengthPassword);
     </script>
 </body>
 </html>
