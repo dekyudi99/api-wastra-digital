@@ -39,7 +39,7 @@
 
     <script>
         const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('password_confirmation');
+        const confirmPassword = document.getElementById('confirmPassword');
         const message = document.getElementById('message');
         const submitBtn = document.getElementById('submitBtn');
 
