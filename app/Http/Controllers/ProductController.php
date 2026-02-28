@@ -281,4 +281,22 @@ class ProductController extends Controller
 
         return new ApiResponseDefault(true, 'Berhasil menampilkan jumlah!', ['total'=>$songket]);
     }
+
+    public function totalProduct()
+    {
+        $total = Product::where('deleted_at', null)->count();
+
+        return new ApiResponseDefault(true, 'Berhasil menampilkan total produk!', ['total'=>$total]);
+    }
+
+    public function fiveNewerProduct()
+    {
+        $product = Product::where('deleted_at', null)->orderBy('created_at', 'desc')->take(5)->get();
+
+        if ($product->isEmpty()) {
+            return new ApiResponseDefault(false, 'Tidak Ada Product Tersedia!', null, 200);
+        }
+
+        return new ApiResponseDefault(true, 'Berhasil Menampilkan Product!', $product);
+    }
 }

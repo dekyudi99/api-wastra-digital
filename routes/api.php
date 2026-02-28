@@ -181,6 +181,10 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+Route::get('/artisan/total', [UserController::class, 'totalArtisan']);
+Route::get('/product/total', [ProductController::class, 'totalProduct']);
+Route::get('/product/five-newer', [ProductController::class, 'fiveNewerProduct']);
+
 Route::post('/midtrans/callback', [MidtransCallbackController::class, 'handle'])->middleware('throttle:20,1');;
 
 Route::get('/artisan/shop/{id}', [UserController::class, 'artisanShop']);

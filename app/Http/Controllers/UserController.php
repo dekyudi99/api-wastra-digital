@@ -96,4 +96,11 @@ class UserController extends Controller
 
         return new ApiResponseDefault(true, "Password Berhasil Diperbarui!", null);
     }
+
+    public function totalArtisan()
+    {
+        $total = User::where('role', 'artisan')->where('status', 'approved')->count();
+
+        return new ApiResponseDefault(true, "Berhasil menampilkan total artisan!", ['total' => $total]);
+    }
 }
