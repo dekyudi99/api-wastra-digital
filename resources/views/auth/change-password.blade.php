@@ -27,7 +27,7 @@
 
             <div class="mb-3">
                 <label class="form-label">Konfirmasi Password</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" required>
+                <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
                 <small id="message" class="mt-1" style="display: none;"></small>
             </div>
 
