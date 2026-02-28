@@ -23,6 +23,7 @@
             <div class="mb-3">
                 <label class="form-label">Password Baru</label>
                 <input type="password" id="password" name="password" class="form-control" required minlength="8">
+                <small id="messagePassword" class="mt-1" style="display: none;"></small>
             </div>
 
             <div class="mb-3">
@@ -41,7 +42,40 @@
         const password = document.getElementById('password');
         const confirmPassword = document.getElementById('confirmPassword');
         const message = document.getElementById('message');
+        const messagePassword = document.getElementById('messagePassword');
         const submitBtn = document.getElementById('submitBtn');
+
+        function validatePassword() {
+            if (password.value.length > 0) {
+                if (password.value.length < 8) {
+                    messagePassword.style.display = 'block';
+                    messagePassword.innerHTML = '× Password harus minimal 8 karakter';
+                    messagePassword.style.color = 'red';
+                    submitBtn.disabled = true;
+                } else {
+                    messagePassword.style.display = 'none';
+                    submitBtn.disabled = false;
+                }
+            } else {
+                messagePassword.style.display = 'none';
+            }
+
+            if (confirmPassword.value.length > 0) {
+                if (confirmPassword.value === password.value) {
+                    message.style.display = 'block';
+                    message.innerHTML = '✓ Password cocok';
+                    message.style.color = 'green';
+                    submitBtn.disabled = false;
+                } else {
+                    message.style.display = 'block';
+                    message.innerHTML = '× Password tidak cocok';
+                    message.style.color = 'red';
+                    submitBtn.disabled = true;
+                }
+            } else {
+                message.style.display = 'none';
+            }
+        }
 
         function validatePassword() {
             if (confirmPassword.value.length > 0) {
