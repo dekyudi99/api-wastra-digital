@@ -32,12 +32,8 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
-        Gate::define('viewPulse', function (User $user) {
-            // // Opsi A: Berdasarkan email admin tertentu
-            // return $user->email === 'yudiartana226@gmail.com'; 
-
-            // Opsi B: Berdasarkan role (jika Anda punya kolom 'role' di tabel users)
-            return $user->role === 'admin';
-        });
+        // Gate::define('viewPulse', function (User $user) {
+        //     return $user->email === 'ikadekyudiartan602@gmail.com' || $user->role === 'admin';
+        // });
     }
 }
