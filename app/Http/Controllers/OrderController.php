@@ -15,6 +15,8 @@ use App\Http\Resources\ApiResponseDefault;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Models\Wallet;
+use App\Mail\OrderNotificationMail;
+use Illuminate\Support\Facades\Mail;
 
 class OrderController extends Controller
 {
