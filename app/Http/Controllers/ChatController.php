@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Topic;
 use App\Models\ChatMessage;
-use App\Models\WastraKnowledge; // Pastikan Model ini sudah dibuat
+use App\Models\WastraKnowledge;
 use Illuminate\Http\Request;
 use OpenAI\Laravel\Facades\OpenAI;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +30,7 @@ class ChatController extends Controller {
     public function ask(Request $request) {
         $request->validate(['message' => 'required', 'topic_id' => 'required']);
 
-        // Matikan buffering PHP agar streaming lancar di Apache
+        // Matikan buffering agar streaming lancar di Apache/Nginx
         if (function_exists('ini_set')) {
             ini_set('output_buffering', 'off');
             ini_set('zlib.output_compression', false);
@@ -39,19 +39,13 @@ class ChatController extends Controller {
         $lowerMessage = strtolower($request->message);
 
         // 1. Deteksi Niat: Membuat Gambar Desain Baru
-        $isImageRequest = Str::contains($lowerMessage, [
-            'buatkan gambar', 'generate image', 'lukis', 'gambarkan', 'desain'
-        ]);
-
+        $isImageRequest = Str::contains($lowerMessage, ['buatkan gambar', 'generate image', 'lukis', 'gambarkan', 'desain']);
         if ($isImageRequest) {
             return $this->generateImage($request);
         }
 
-        // 2. Deteksi Niat: Meminta Langkah Teknis Penenunan (Baris Demi Baris)
-        $isTechnicalGuide = Str::contains($lowerMessage, [
-            'langkah', 'instruksi', 'cara membuat', 'teknis', 'baris demi baris'
-        ]);
-
+        // 2. Deteksi Niat: Meminta Langkah Teknis (Baris Demi Baris)
+        $isTechnicalGuide = Str::contains($lowerMessage, ['langkah', 'instruksi', 'cara membuat', 'teknis', 'baris demi baris']);
         if ($isTechnicalGuide) {
             return $this->generateTechnicalGuide($request);
         }
@@ -61,11 +55,10 @@ class ChatController extends Controller {
     }
 
     /**
-     * ALUR: Analisis desain terakhir dan berikan instruksi teknis Baris-Demi-Baris
+     * PERBAIKAN: Menggunakan Base64 agar OpenAI bisa membaca gambar dari Localhost/Private VPS
      */
     private function generateTechnicalGuide($request) {
         try {
-            // Ambil pesan terakhir
             $lastImage = ChatMessage::where('topic_id', $request->topic_id)
                 ->where('role', 'assistant')
                 ->where('type', 'image')
@@ -73,38 +66,49 @@ class ChatController extends Controller {
                 ->first();
 
             if (!$lastImage) {
-                return response()->json(['error' => true, 'message' => 'Buat desain dulu.'], 400);
+                return response()->json(['error' => true, 'message' => 'Silakan buat desain desain terlebih dahulu.'], 400);
             }
 
-            // Pastikan OpenAI merespon sebelum koneksi timeout
+            // Konversi gambar ke Base64 (Solusi agar OpenAI bisa 'melihat' gambar Anda)
+            $path = storage_path('app/public/' . str_replace('storage/', '', $lastImage->image_path));
+            if (!file_exists($path)) {
+                return response()->json(['error' => true, 'message' => 'File gambar tidak ditemukan.'], 404);
+            }
+            
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+
             $response = OpenAI::chat()->create([
                 'model' => 'gpt-4o', 
                 'messages' => [
-                    ['role' => 'system', 'content' => 'Berikan instruksi baris demi baris.'],
+                    [
+                        'role' => 'system', 
+                        'content' => 'Anda adalah instruktur penenunan teknis Wastra Bali. Analisis gambar yang diberikan dan berikan instruksi teknis BARIS DEMI BARIS sesuai format PDF panduan teknis (Baris, Instruksi Teknis, Warna). Gunakan istilah lungsin dan pakan.'
+                    ],
                     [
                         'role' => 'user',
                         'content' => [
                             ['type' => 'text', 'text' => $request->message],
-                            ['type' => 'image_url', 'image_url' => ['url' => asset($lastImage->image_path)]],
+                            ['type' => 'image_url', 'image_url' => ['url' => $base64]], 
                         ],
                     ],
                 ],
             ]);
 
-            return response()->json(['type' => 'text', 'content' => $response->choices[0]->message->content]);
+            $fullContent = $response->choices[0]->message->content;
 
-        } catch (\PDOException $e) {
-            // Error koneksi database Laragon
-            return response()->json(['error' => true, 'message' => 'MySQL Laragon terputus.'], 500);
+            // Simpan Riwayat Chat
+            ChatMessage::create(['topic_id' => $request->topic_id, 'role' => 'user', 'content' => $request->message]);
+            ChatMessage::create(['topic_id' => $request->topic_id, 'role' => 'assistant', 'content' => $fullContent]);
+
+            return response()->json(['type' => 'text', 'content' => $fullContent]);
+
         } catch (\Exception $e) {
-            // Error OpenAI atau lainnya
-            return response()->json(['error' => true, 'message' => 'Gagal memproses gambar: ' . $e->getMessage()], 500);
+            return response()->json(['error' => true, 'message' => 'Gagal menganalisis desain: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * ALUR: Membuat gambar dengan DALL-E 3
-     */
     private function generateImage($request) {
         try {
             $translatedPrompt = $this->translatePrompt($request->message);
@@ -143,9 +147,6 @@ class ChatController extends Controller {
         }
     }
 
-    /**
-     * ALUR: Streaming teks biasa (GPT-3.5 / GPT-4o)
-     */
     private function streamTextResponse($request) {
         return response()->stream(function () use ($request) {
             $history = ChatMessage::where('topic_id', $request->topic_id)
