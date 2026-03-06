@@ -7,7 +7,7 @@ use Midtrans\Config;
 use App\Models\User;
 use App\Observers\UserObserver;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Gate;
+// use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
