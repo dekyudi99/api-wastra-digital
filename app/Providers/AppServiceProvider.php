@@ -7,7 +7,7 @@ use Midtrans\Config;
 use App\Models\User;
 use App\Observers\UserObserver;
 use Illuminate\Support\Facades\URL;
-// use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Gate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,8 +32,9 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
-        // Gate::define('viewPulse', function (User $user) {
-        //     return $user->email === 'ikadekyudiartan602@gmail.com' || $user->role === 'admin';
-        // });
+        Gate::define('viewPulse', function (User $user) {
+            // return $user->email === 'ikadekyudiartan602@gmail.com' || $user->role === 'admin';
+            return true; // Allow all users to view Laravel Telescope (for testing purposes only, remove in production)
+        });
     }
 }
