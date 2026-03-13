@@ -60,7 +60,7 @@ return [
         'driver' => env('PULSE_STORAGE_DRIVER', 'database'),
 
         'trim' => [
-            'keep' => env('PULSE_STORAGE_KEEP', '7 days'),
+            'keep' => env('PULSE_STORAGE_KEEP', '30 days'),
         ],
 
         'database' => [
@@ -87,7 +87,7 @@ return [
 
         'trim' => [
             'lottery' => [1, 1_000],
-            'keep' => env('PULSE_INGEST_KEEP', '7 days'),
+            'keep' => env('PULSE_INGEST_KEEP', '30 days'),
         ],
 
         'redis' => [
@@ -122,7 +122,7 @@ return [
 
     'middleware' => [
         'web',
-        // Authorize::class,
+        Authorize::class,
     ],
 
     /*

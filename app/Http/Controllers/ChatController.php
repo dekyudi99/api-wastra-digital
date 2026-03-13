@@ -39,13 +39,13 @@ class ChatController extends Controller {
         $lowerMessage = strtolower($request->message);
 
         // 1. Deteksi Niat: Membuat Gambar Desain Baru
-        $isImageRequest = Str::contains($lowerMessage, ['buatkan gambar', 'generate image', 'lukis', 'gambarkan', 'desain']);
+        $isImageRequest = Str::contains($lowerMessage, ['buatkan gambar', 'generate image', 'lukis', 'gambarkan', 'desain', 'membuatkan gambar']);
         if ($isImageRequest) {
             return $this->generateImage($request);
         }
 
         // 2. Deteksi Niat: Meminta Langkah Teknis (Baris Demi Baris)
-        $isTechnicalGuide = Str::contains($lowerMessage, ['langkah', 'instruksi', 'cara membuat', 'teknis', 'baris demi baris']);
+        $isTechnicalGuide = Str::contains($lowerMessage, ['langkah', 'langkah-langkah', 'instruksi', 'cara membuat', 'cara pembuatannya', 'cara pembuatan', 'teknis', 'baris demi baris', 'prosedur']);
         if ($isTechnicalGuide) {
             return $this->generateTechnicalGuide($request);
         }
@@ -58,55 +58,52 @@ class ChatController extends Controller {
      * PERBAIKAN: Menggunakan Base64 agar OpenAI bisa membaca gambar dari Localhost/Private VPS
      */
     private function generateTechnicalGuide($request) {
-        try {
-            $lastImage = ChatMessage::where('topic_id', $request->topic_id)
-                ->where('role', 'assistant')
-                ->where('type', 'image')
-                ->latest()
-                ->first();
+        $lastImage = ChatMessage::where('topic_id', $request->topic_id)
+            ->where('role', 'assistant')
+            ->where('type', 'image')
+            ->latest()->first();
 
-            if (!$lastImage) {
-                return response()->json(['error' => true, 'message' => 'Silakan buat desain desain terlebih dahulu.'], 400);
-            }
+        if (!$lastImage) return response()->json(['error' => 'Buat desain dulu.'], 400);
 
-            // Konversi gambar ke Base64 (Solusi agar OpenAI bisa 'melihat' gambar Anda)
-            $path = storage_path('app/public/' . str_replace('storage/', '', $lastImage->image_path));
-            if (!file_exists($path)) {
-                return response()->json(['error' => true, 'message' => 'File gambar tidak ditemukan.'], 404);
-            }
-            
-            $type = pathinfo($path, PATHINFO_EXTENSION);
-            $data = file_get_contents($path);
-            $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+        // Konversi ke Base64 untuk Vision
+        $path = storage_path('app/public/' . str_replace('storage/', '', $lastImage->image_path));
+        $base64 = 'data:image/' . pathinfo($path, PATHINFO_EXTENSION) . ';base64,' . base64_encode(file_get_contents($path));
 
-            $response = OpenAI::chat()->create([
-                'model' => 'gpt-4o', 
+        return response()->stream(function () use ($request, $base64) {
+            $stream = OpenAI::chat()->createStreamed([
+                'model' => 'gpt-4o',
                 'messages' => [
-                    [
-                        'role' => 'system', 
-                        'content' => 'Anda adalah instruktur penenunan teknis Wastra Bali. Analisis gambar yang diberikan dan berikan instruksi teknis BARIS DEMI BARIS sesuai format PDF panduan teknis (Baris, Instruksi Teknis, Warna). Gunakan istilah lungsin dan pakan.'
-                    ],
+                    ['role' => 'system', 'content' => 'Anda adalah instruktur tenun. Berikan instruksi BARIS DEMI BARIS.'],
                     [
                         'role' => 'user',
                         'content' => [
                             ['type' => 'text', 'text' => $request->message],
-                            ['type' => 'image_url', 'image_url' => ['url' => $base64]], 
+                            ['type' => 'image_url', 'image_url' => ['url' => $base64]],
                         ],
                     ],
                 ],
             ]);
 
-            $fullContent = $response->choices[0]->message->content;
+            $fullContent = "";
+            foreach ($stream as $response) {
+                $text = $response->choices[0]->delta->content ?? '';
+                if ($text) {
+                    echo "data: " . json_encode(['text' => $text]) . "\n\n";
+                    $fullContent .= $text;
+                    ob_flush(); flush();
+                }
+            }
 
-            // Simpan Riwayat Chat
+            // Simpan hasil akhir ke Database
             ChatMessage::create(['topic_id' => $request->topic_id, 'role' => 'user', 'content' => $request->message]);
             ChatMessage::create(['topic_id' => $request->topic_id, 'role' => 'assistant', 'content' => $fullContent]);
-
-            return response()->json(['type' => 'text', 'content' => $fullContent]);
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => true, 'message' => 'Gagal menganalisis desain: ' . $e->getMessage()], 500);
-        }
+            
+            echo "data: [DONE]\n\n";
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 
     private function generateImage($request) {
