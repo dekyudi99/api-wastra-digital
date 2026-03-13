@@ -19,7 +19,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['wastradigital.com', 'www.wastradigital.com'],
+    'allowed_origins' => ['https://wastradigital.com', 'https://www.wastradigital.com'],
 
     'allowed_origins_patterns' => [],
 
